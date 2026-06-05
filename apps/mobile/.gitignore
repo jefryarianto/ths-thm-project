@@ -1,0 +1,9 @@
+node_modules/
+android/
+.expo/
+.idea/
+*.keystore
+*.jks
+.env
+.DS_Store
+Thumbs.db
