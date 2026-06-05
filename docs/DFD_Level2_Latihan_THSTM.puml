@@ -1,0 +1,40 @@
+@startuml
+title DFD Level 2 - Manajemen Latihan & Absensi
+
+actor Admin_Ranting
+actor Penguji
+actor Anggota
+
+rectangle "Modul Latihan & Absensi" {
+    (Jadwalkan Latihan)
+    (Input Laporan Latihan)
+    (Absensi Manual oleh Penguji)
+    (Absensi QR oleh Anggota)
+    (Catatan Khusus Peserta)
+    (Dokumentasi Latihan)
+    (Rekomendasi Latihan Berikutnya)
+}
+
+Penguji --> (Jadwalkan Latihan)
+Penguji --> (Input Laporan Latihan)
+Penguji --> (Absensi Manual oleh Penguji)
+Admin_Ranting --> (Jadwalkan Latihan)
+Admin_Ranting --> (Input Laporan Latihan)
+Anggota --> (Absensi QR oleh Anggota)
+
+(Jadwalkan Latihan) --> (Input Laporan Latihan)
+(Input Laporan Latihan) --> (Absensi Manual oleh Penguji)
+(Absensi Manual oleh Penguji) --> (Catatan Khusus Peserta)
+(Absensi QR oleh Anggota) --> (Input Laporan Latihan)
+(Input Laporan Latihan) --> (Rekomendasi Latihan Berikutnya)
+(Input Laporan Latihan) --> (Dokumentasi Latihan)
+
+(Jadwalkan Latihan) --> database "DB Latihan"
+(Input Laporan Latihan) --> database "DB Latihan"
+(Absensi Manual oleh Penguji) --> database "DB Absensi Latihan"
+(Absensi QR oleh Anggota) --> database "DB Absensi Latihan"
+(Catatan Khusus Peserta) --> database "DB Catatan Latihan Peserta"
+(Dokumentasi Latihan) --> database "DB Dokumentasi Latihan"
+(Rekomendasi Latihan Berikutnya) --> database "DB Latihan"
+
+@enduml

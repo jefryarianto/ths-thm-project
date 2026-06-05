@@ -1,0 +1,49 @@
+@startuml
+title DFD Level 2 - Manajemen Anggota & Calon Anggota
+
+actor Superadmin
+actor Admin_Distrik
+actor Admin_Wilayah
+actor Admin_Ranting
+actor Admin_Kegiatan
+actor Anggota
+
+rectangle "Modul Anggota & Calon Anggota" {
+    (Pendaftaran Anggota Baru)
+    (Import CSV Anggota)
+    (Validasi Data Anggota)
+    (Klaim Keanggotaan oleh Anggota)
+    (Update Data Anggota)
+    (Approval Perubahan Data)
+    (Kelola Calon Anggota)
+    (Konversi Calon ke Anggota Aktif)
+    (Manajemen Role Anggota)
+}
+
+Superadmin --> (Pendaftaran Anggota Baru)
+Admin_Distrik --> (Pendaftaran Anggota Baru)
+Admin_Wilayah --> (Pendaftaran Anggota Baru)
+Admin_Ranting --> (Pendaftaran Anggota Baru)
+Admin_Ranting --> (Import CSV Anggota)
+Admin_Ranting --> (Kelola Calon Anggota)
+Admin_Kegiatan --> (Kelola Calon Anggota)
+Anggota --> (Klaim Keanggotaan oleh Anggota)
+Anggota --> (Update Data Anggota)
+
+(Import CSV Anggota) --> (Validasi Data Anggota)
+(Validasi Data Anggota) --> (Pendaftaran Anggota Baru)
+(Klaim Keanggotaan oleh Anggota) --> (Validasi Data Anggota)
+(Update Data Anggota) --> (Approval Perubahan Data)
+(Kelola Calon Anggota) --> (Konversi Calon ke Anggota Aktif)
+(Pendaftaran Anggota Baru) --> (Manajemen Role Anggota)
+
+(Pendaftaran Anggota Baru) --> database "DB Anggota"
+(Validasi Data Anggota) --> database "DB Anggota"
+(Import CSV Anggota) --> database "DB Import Jobs"
+(Klaim Keanggotaan oleh Anggota) --> database "DB Claim Anggota"
+(Update Data Anggota) --> database "DB Anggota Update Request"
+(Kelola Calon Anggota) --> database "DB Calon Anggota"
+(Konversi Calon ke Anggota Aktif) --> database "DB Anggota"
+(Manajemen Role Anggota) --> database "DB Anggota Role"
+
+@enduml

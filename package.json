@@ -1,0 +1,29 @@
+{
+  "name": "ths-thm-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "THS-THM Management System - Monorepo",
+  "scripts": {
+    "dev:api": "pnpm --filter @ths-thm/api dev",
+    "dev:web": "pnpm --filter @ths-thm/web-admin dev",
+    "dev:mobile": "pnpm --filter @ths-thm/mobile dev",
+    "build:api": "pnpm --filter @ths-thm/api build",
+    "build:web": "pnpm --filter @ths-thm/web-admin build",
+    "build:shared": "pnpm --filter @ths-thm/shared build",
+    "build:templates": "pnpm --filter @ths-thm/templates build",
+    "build:ui": "pnpm --filter @ths-thm/ui build",
+    "build:all": "pnpm --filter @ths-thm/shared build && pnpm --filter @ths-thm/templates build && pnpm --filter @ths-thm/ui build && pnpm --filter @ths-thm/api build",
+    "dev:api:watch": "pnpm --filter @ths-thm/api dev:watch",
+    "db:migrate": "pnpm --filter @ths-thm/api exec prisma migrate dev",
+    "db:seed": "pnpm --filter @ths-thm/api exec prisma db seed",
+    "db:studio": "pnpm --filter @ths-thm/api exec prisma studio",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter @ths-thm/api test",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}

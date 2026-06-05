@@ -1,0 +1,23 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  '@firebase/util': true
+
+onlyBuiltDependencies:
+  - "@firebase/util"
+  - "@react-native-firebase/app"
+  - "@react-native-firebase/messaging"
+  - "@nestjs/core"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@scarf/scarf"
+  - bcrypt
+  - esbuild
+  - expo-modules-core
+  - expo
+  - prisma
+  - protobufjs
+  - react-native
+  - sharp

@@ -1,0 +1,56 @@
+@startuml
+title DFD Level 2 - Generate Dokumen & Verifikasi
+
+actor Superadmin
+actor Admin_Distrik
+actor Admin_Kegiatan
+actor Anggota
+actor Public_User
+
+rectangle "Modul Dokumen & Verifikasi" {
+    (Kelola Tipe Dokumen)
+    (Kelola Template Dokumen)
+    (Kelola Penandatangan & Cap)
+    (Generate Kartu Anggota)
+    (Generate Sertifikat Pendadaran)
+    (Generate Piagam Prestasi)
+    (Generate Dokumen Lainnya)
+    (Terbitkan Dokumen)
+    (Verifikasi QR Publik)
+    (Cabut/Panggil Dokumen)
+}
+
+Superadmin --> (Kelola Tipe Dokumen)
+Superadmin --> (Kelola Template Dokumen)
+Superadmin --> (Kelola Penandatangan & Cap)
+Admin_Distrik --> (Generate Kartu Anggota)
+Admin_Distrik --> (Generate Piagam Prestasi)
+Admin_Kegiatan --> (Generate Sertifikat Pendadaran)
+Admin_Kegiatan --> (Generate Dokumen Lainnya)
+Anggota --> (Verifikasi QR Publik)
+Public_User --> (Verifikasi QR Publik)
+
+(Kelola Tipe Dokumen) --> (Kelola Template Dokumen)
+(Kelola Template Dokumen) --> (Generate Kartu Anggota)
+(Kelola Template Dokumen) --> (Generate Sertifikat Pendadaran)
+(Kelola Template Dokumen) --> (Generate Piagam Prestasi)
+(Kelola Penandatangan & Cap) --> (Generate Kartu Anggota)
+(Kelola Penandatangan & Cap) --> (Generate Sertifikat Pendadaran)
+(Kelola Penandatangan & Cap) --> (Generate Piagam Prestasi)
+(Generate Kartu Anggota) --> (Terbitkan Dokumen)
+(Generate Sertifikat Pendadaran) --> (Terbitkan Dokumen)
+(Generate Piagam Prestasi) --> (Terbitkan Dokumen)
+(Generate Dokumen Lainnya) --> (Terbitkan Dokumen)
+(Terbitkan Dokumen) --> (Verifikasi QR Publik)
+(Terbitkan Dokumen) --> (Cabut/Panggil Dokumen)
+
+(Kelola Tipe Dokumen) --> database "DB Document Types"
+(Kelola Template Dokumen) --> database "DB Document Templates"
+(Kelola Penandatangan & Cap) --> database "DB Document Signers & Stamps"
+(Terbitkan Dokumen) --> database "DB Issued Documents"
+(Terbitkan Dokumen) --> database "DB MinIO/S3 (File PDF/PNG)"
+(Verifikasi QR Publik) --> database "DB Document Validation Logs"
+(Generate Kartu Anggota) --> database "DB QR Tokens"
+(Generate Sertifikat Pendadaran) --> database "DB QR Tokens"
+
+@enduml

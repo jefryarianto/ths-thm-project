@@ -1,0 +1,882 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+// ORGANISASI — Multi-level hierarchy
+// ═══════════════════════════════════════════
+
+model Nasional {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default(uuid())
+  nama      String
+  kode      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  distrik Distrik[]
+
+  @@map("nasional")
+}
+
+model Distrik {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  nasionalId  Int
+  nasional    Nasional @relation(fields: [nasionalId], references: [id])
+  kodeDistrik String   @unique
+  nama        String
+  alamat      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  wilayah      Wilayah[]
+  unitLatihan  UnitLatihan[]
+
+  @@map("distrik")
+}
+
+model Wilayah {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default(uuid())
+  distrikId Int
+  distrik   Distrik  @relation(fields: [distrikId], references: [id])
+  kodeWilayah String
+  nama      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ranting Ranting[]
+
+  @@map("wilayah")
+}
+
+model Ranting {
+  id            Int      @id @default(autoincrement())
+  uuid          String   @unique @default(uuid())
+  wilayahId     Int
+  wilayah       Wilayah  @relation(fields: [wilayahId], references: [id])
+  kodeRanting   String
+  nama          String
+  lokasiLatihan String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  anggota            Anggota[]
+  calonAnggota       CalonAnggota[]
+  pendaftaranAnggota PendaftaranAnggota[]
+  latihan            Latihan[]
+
+  @@map("ranting")
+}
+
+model UnitLatihan {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default(uuid())
+  distrikId Int
+  distrik   Distrik  @relation(fields: [distrikId], references: [id])
+  nama      String
+  tipe      String   @default("reguler") // reguler, khusus
+  lokasi    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("unit_latihan")
+}
+
+// ═══════════════════════════════════════════
+// USER & AUTH
+// ═══════════════════════════════════════════
+
+model User {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  name         String
+  email        String?  @unique
+  nomorHp      String?
+  passwordHash String
+  roleId       Int
+  role         Role     @relation(fields: [roleId], references: [id])
+  scopeType    String?  // nasional, distrik, wilayah, ranting
+  scopeId      Int?     // id of scope entity
+  anggotaId    Int?     @unique
+  anggota      Anggota? @relation(fields: [anggotaId], references: [id])
+  fcmToken     String?
+  isActive     Boolean  @default(true)
+  lastLogin    DateTime?
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  calonAnggotaUsulan  CalonAnggota[]       @relation("UsulanCalonAnggota")
+  claims              ClaimAnggota[]        @relation("PengajuClaim")
+  kegiatan            Kegiatan[]
+  pengujiKegiatan     PengujiKegiatan[]
+  pendaftaranAnggota  PendaftaranAnggota[]  @relation("ReviewPendaftaran")
+  claimAnggota        ClaimAnggota[]        @relation("ReviewClaim")
+  anggotaUpdateRequest AnggotaUpdateRequest[] @relation("PengajuUpdate")
+  reviewUpdateRequest AnggotaUpdateRequest[] @relation("ReviewerUpdate")
+  latihanDibuat       Latihan[]             @relation("PelatihLatihan")
+  catatanLatihan      CatatanLatihanPeserta[]
+  dokumentasiLatihan  DokumentasiLatihan[]
+  absensiKegiatan     AbsensiKegiatan[]     @relation("PencatatAbsensiKegiatan")
+  absensiLatihan      AbsensiLatihan[]      @relation("PencatatAbsensiLatihan")
+  pembayaranIuran     PembayaranIuran[]     @relation("VerifikatorIuran")
+  importJobs          ImportJob[]
+  organisasiDokumen   OrganisasiDokumen[]
+  suratMasuk          SuratMasuk[]
+  suratKeluar         SuratKeluar[]
+  kontenDitulis       Konten[]              @relation("PenulisKonten")
+  kontenReview        Konten[]              @relation("ReviewerKonten")
+  issuedDocuments     IssuedDocument[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  hasilPendadaran     HasilPendadaran[]     @relation("ValidatorHasil")
+  nilaiPendadaran     NilaiPendadaran[]     @relation("PengujiNilai")
+  documentTemplates   DocumentTemplate[]
+
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  nama        String   @unique
+  scope       String   // superadmin, admin_distrik, admin_wilayah, admin_ranting, admin_kegiatan, pelatih, penguji, anggota
+  permissions String[] // ["anggota:read", "anggota:write", ...]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
+}
+
+// ═══════════════════════════════════════════
+// ANGGOTA & CALON ANGGOTA
+// ═══════════════════════════════════════════
+
+model Anggota {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  rantingId         Int
+  ranting           Ranting  @relation(fields: [rantingId], references: [id])
+  nomorAnggota      String   @unique
+  namaLengkap       String
+  jenisKelamin      String   // L, P
+  tempatLahir       String?
+  tanggalLahir      DateTime?
+  alamat            String?
+  noHp              String?
+  email             String?
+  fotoPath          String?
+  statusKeanggotaan String   @default("aktif") // aktif, nonaktif, pindah, keluar, meninggal
+  tingkat           String?  // Tamtama, Bintara, Perwira, Laksana
+  statusData        String   @default("incomplete") // complete, incomplete
+  statusValidasi    String   @default("pending") // pending, approved, rejected
+  missingFields     Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User?
+  anggotaRole       AnggotaRole[]
+  anggotaUpdateRequest AnggotaUpdateRequest[]
+  claimAnggota      ClaimAnggota[]
+  absensiKegiatan   AbsensiKegiatan[]
+  absensiLatihan    AbsensiLatihan[]
+  catatanLatihan    CatatanLatihanPeserta[]
+  pembayaranIuran   PembayaranIuran[]
+  issuedDocuments   IssuedDocument[]
+
+  @@map("anggota")
+}
+
+model CalonAnggota {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  rantingId    Int
+  ranting      Ranting  @relation(fields: [rantingId], references: [id])
+  namaLengkap  String
+  jenisKelamin String   // L, P
+  tempatLahir  String?
+  tanggalLahir DateTime?
+  alamat       String?
+  noHp         String?
+  email        String?
+  status       String   @default("diusulkan") // diusulkan, mengikuti_pendadaran, lulus, gagal, dibatalkan
+  usulOlehUserId Int
+  usulOleh     User     @relation("UsulanCalonAnggota", fields: [usulOlehUserId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  absensiKegiatan   AbsensiKegiatan[]
+  absensiLatihan    AbsensiLatihan[]
+  catatanLatihan    CatatanLatihanPeserta[]
+  nilaiPendadaran   NilaiPendadaran[]
+  hasilPendadaran   HasilPendadaran[]
+  issuedDocuments   IssuedDocument[]
+
+  @@map("calon_anggota")
+}
+
+model PendaftaranAnggota {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  rantingId    Int?
+  ranting      Ranting? @relation(fields: [rantingId], references: [id])
+  namaLengkap  String
+  jenisKelamin String   // L, P
+  tempatLahir  String?
+  tanggalLahir DateTime?
+  noHp         String
+  email        String?
+  alamat       String?
+  status       String   @default("pending") // pending, approved, rejected
+  catatanAdmin String?
+  reviewedBy   Int?
+  reviewer     User?    @relation("ReviewPendaftaran", fields: [reviewedBy], references: [id])
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("pendaftaran_anggota")
+}
+
+model ClaimAnggota {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  userId            Int
+  user              User     @relation("PengajuClaim", fields: [userId], references: [id])
+  anggotaId         Int?
+  anggota           Anggota? @relation(fields: [anggotaId], references: [id])
+  namaLengkap       String
+  nomorAnggotaInput String
+  nomorUnikKartu    String?
+  nomorUnikSertifikat String?
+  buktiFilePath     String?
+  status            String   @default("pending") // pending, approved, rejected
+  catatanAdmin      String?
+  reviewedBy        Int?
+  reviewer          User?    @relation("ReviewClaim", fields: [reviewedBy], references: [id])
+  reviewedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("claim_anggota")
+}
+
+model AnggotaRole {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique @default(uuid())
+  anggotaId  Int
+  anggota    Anggota  @relation(fields: [anggotaId], references: [id])
+  roleCode   String   // anggota, pelatih, penguji, wasit_juri
+  issuedAt   DateTime @default(now())
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@map("anggota_role")
+}
+
+model AnggotaUpdateRequest {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  anggotaId    Int
+  anggota      Anggota  @relation(fields: [anggotaId], references: [id])
+  submittedBy  Int
+  pengaju      User     @relation("PengajuUpdate", fields: [submittedBy], references: [id])
+  oldData      Json?
+  newData      Json?
+  status       String   @default("pending") // pending, approved, rejected
+  catatanAdmin String?
+  reviewedBy   Int?
+  reviewer     User?    @relation("ReviewerUpdate", fields: [reviewedBy], references: [id])
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("anggota_update_request")
+}
+
+// ═══════════════════════════════════════════
+// KEGIATAN & LATIHAN
+// ═══════════════════════════════════════════
+
+model Kegiatan {
+  id            Int      @id @default(autoincrement())
+  uuid          String   @unique @default(uuid())
+  scopeType     String   // nasional, distrik, wilayah, ranting, unit_latihan
+  scopeId       Int
+  nama          String
+  tipe          String   @default("lainnya") // latihan, pendadaran, ujian_tingkat, rapat, retret, pelantikan, lainnya
+  lokasi        String
+  tanggalMulai  DateTime
+  tanggalSelesai DateTime?
+  createdBy     Int
+  creator       User     @relation(fields: [createdBy], references: [id])
+  status        String   @default("draft") // draft, published, closed, cancelled
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  absensiKegiatan   AbsensiKegiatan[]
+  latihan           Latihan[]
+  pengujiKegiatan   PengujiKegiatan[]
+  nilaiPendadaran   NilaiPendadaran[]
+  hasilPendadaran   HasilPendadaran[]
+  issuedDocuments   IssuedDocument[]
+
+  @@map("kegiatan")
+}
+
+model AbsensiKegiatan {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  kegiatanId     Int
+  kegiatan       Kegiatan @relation(fields: [kegiatanId], references: [id])
+  anggotaId      Int?
+  anggota        Anggota?       @relation(fields: [anggotaId], references: [id])
+  calonAnggotaId Int?
+  calonAnggota   CalonAnggota?  @relation(fields: [calonAnggotaId], references: [id])
+  checkinMethod  String   @default("manual") // manual, qr
+  checkinTime    DateTime
+  recordedBy     Int
+  pencatat       User     @relation("PencatatAbsensiKegiatan", fields: [recordedBy], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@map("absensi_kegiatan")
+}
+
+model Latihan {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  rantingId         Int
+  ranting           Ranting  @relation(fields: [rantingId], references: [id])
+  kegiatanId        Int?
+  kegiatan          Kegiatan? @relation(fields: [kegiatanId], references: [id])
+  pelatihId         Int
+  pelatih           User     @relation("PelatihLatihan", fields: [pelatihId], references: [id])
+  hariTanggal       DateTime
+  lokasi            String
+  jenisMateri       String
+  hasilLatihanGlobal String?
+  rekomendasiLatihanBerikutnya String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  absensiLatihan      AbsensiLatihan[]
+  catatanLatihanPeserta CatatanLatihanPeserta[]
+  dokumentasiLatihan  DokumentasiLatihan[]
+
+  @@map("latihan")
+}
+
+model AbsensiLatihan {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  latihanId      Int
+  latihan        Latihan  @relation(fields: [latihanId], references: [id])
+  anggotaId      Int?
+  anggota        Anggota?       @relation(fields: [anggotaId], references: [id])
+  calonAnggotaId Int?
+  calonAnggota   CalonAnggota?  @relation(fields: [calonAnggotaId], references: [id])
+  checkinMethod  String   @default("manual") // manual, qr
+  checkinTime    DateTime
+  recordedBy     Int
+  pencatat       User     @relation("PencatatAbsensiLatihan", fields: [recordedBy], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@map("absensi_latihan")
+}
+
+model CatatanLatihanPeserta {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  latihanId      Int
+  latihan        Latihan  @relation(fields: [latihanId], references: [id])
+  anggotaId      Int?
+  anggota        Anggota?       @relation(fields: [anggotaId], references: [id])
+  calonAnggotaId Int?
+  calonAnggota   CalonAnggota?  @relation(fields: [calonAnggotaId], references: [id])
+  catatanKhusus  String
+  createdBy      Int
+  pembuat        User     @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@map("catatan_latihan_peserta")
+}
+
+model DokumentasiLatihan {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  latihanId   Int
+  latihan     Latihan  @relation(fields: [latihanId], references: [id])
+  filePath    String
+  fileType    String   // foto, video
+  urutan      Int      @default(0)
+  uploadedBy  Int
+  pengupload  User     @relation(fields: [uploadedBy], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("dokumentasi_latihan")
+}
+
+// ═══════════════════════════════════════════
+// PENDADARAN — Assessment & Examination
+// ═══════════════════════════════════════════
+
+model AspekPenilaian {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique @default(uuid())
+  kodeAspek  String   @unique
+  namaAspek  String
+  deskripsi  String?
+  bobot      Decimal  @db.Decimal(5, 2)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  itemPenilaian ItemPenilaian[]
+
+  @@map("aspek_penilaian")
+}
+
+model ItemPenilaian {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  aspekId      Int
+  aspek        AspekPenilaian @relation(fields: [aspekId], references: [id])
+  kodeItem     String   @unique
+  namaItem     String
+  skorMaksimal Decimal  @db.Decimal(5, 2)
+  bobot        Decimal  @db.Decimal(5, 2)
+  urutan       Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  nilaiPendadaran NilaiPendadaran[]
+
+  @@map("item_penilaian")
+}
+
+model PengujiKegiatan {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  kegiatanId     Int
+  kegiatan       Kegiatan @relation(fields: [kegiatanId], references: [id])
+  pengujiUserId  Int
+  penguji        User     @relation(fields: [pengujiUserId], references: [id])
+  anggotaId      Int?
+  peran          String   @default("anggota") // ketua, anggota
+  createdAt      DateTime @default(now())
+
+  @@map("penguji_kegiatan")
+}
+
+model NilaiPendadaran {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  kegiatanId      Int
+  kegiatan        Kegiatan       @relation(fields: [kegiatanId], references: [id])
+  calonAnggotaId  Int
+  calonAnggota    CalonAnggota   @relation(fields: [calonAnggotaId], references: [id])
+  itemPenilaianId Int
+  itemPenilaian   ItemPenilaian  @relation(fields: [itemPenilaianId], references: [id])
+  pengujiUserId   Int
+  penguji         User           @relation("PengujiNilai", fields: [pengujiUserId], references: [id])
+  skor            Decimal        @db.Decimal(5, 2)
+  komentar        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([kegiatanId, calonAnggotaId, itemPenilaianId, pengujiUserId])
+  @@map("nilai_pendadaran")
+}
+
+model HasilPendadaran {
+  id               Int      @id @default(autoincrement())
+  uuid             String   @unique @default(uuid())
+  kegiatanId       Int
+  kegiatan         Kegiatan       @relation(fields: [kegiatanId], references: [id])
+  calonAnggotaId   Int
+  calonAnggota     CalonAnggota   @relation(fields: [calonAnggotaId], references: [id])
+  totalSkor        Decimal        @db.Decimal(7, 2)
+  ranking          Int
+  statusKelulusan  String   // lulus, gagal
+  statusValidasi   String   @default("pending") // pending, approved, rejected
+  divalidasiOleh   Int?
+  validator        User?    @relation("ValidatorHasil", fields: [divalidasiOleh], references: [id])
+  divalidasiAt     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([kegiatanId, calonAnggotaId])
+  @@map("hasil_pendadaran")
+}
+
+// ═══════════════════════════════════════════
+// IURAN — Dues Management
+// ═══════════════════════════════════════════
+
+model JenisIuran {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default(uuid())
+  nama      String
+  deskripsi String?
+  nominal   Decimal  @db.Decimal(12, 2)
+  periode   String   // bulanan, tahunan, kegiatan, sekali
+  scopeType String   // nasional, distrik, wilayah, ranting
+  scopeId   Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pembayaranIuran PembayaranIuran[]
+
+  @@map("jenis_iuran")
+}
+
+model PembayaranIuran {
+  id            Int      @id @default(autoincrement())
+  uuid          String   @unique @default(uuid())
+  jenisIuranId  Int
+  jenisIuran    JenisIuran @relation(fields: [jenisIuranId], references: [id])
+  anggotaId     Int
+  anggota       Anggota    @relation(fields: [anggotaId], references: [id])
+  jumlahBayar   Decimal    @db.Decimal(12, 2)
+  tanggalBayar  DateTime
+  metodeBayar   String     @default("tunai") // tunai, transfer, qris, ewallet
+  status        String     @default("pending") // pending, lunas, ditolak, dibatalkan
+  buktiBayarPath String?
+  verifiedBy    Int?
+  verifikator   User?      @relation("VerifikatorIuran", fields: [verifiedBy], references: [id])
+  verifiedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("pembayaran_iuran")
+}
+
+// ═══════════════════════════════════════════
+// DOKUMEN — Unified Document System
+// ═══════════════════════════════════════════
+
+model DocumentType {
+  id               Int      @id @default(autoincrement())
+  uuid             String   @unique @default(uuid())
+  code             String   @unique
+  name             String
+  category         String   // kartu, sertifikat, piagam, surat, dokumen_lain
+  isAutoGenerated  Boolean  @default(false)
+  requiresApproval Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  documentTemplates DocumentTemplate[]
+  documentSigners   DocumentSigner[]
+  documentStamps    DocumentStamp[]
+  issuedDocuments   IssuedDocument[]
+
+  @@map("document_types")
+}
+
+model DocumentTemplate {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  documentTypeId    Int
+  documentType      DocumentType @relation(fields: [documentTypeId], references: [id])
+  name              String
+  templateFilePath  String
+  layoutJson        Json?
+  backgroundFilePath String?
+  isActive          Boolean  @default(true)
+  scopeType         String?  // nasional, distrik, wilayah, ranting
+  scopeId           Int?
+  createdBy         Int
+  pembuat           User     @relation(fields: [createdBy], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  issuedDocuments IssuedDocument[]
+
+  @@map("document_templates")
+}
+
+model DocumentSigner {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  documentTypeId    Int?
+  documentType      DocumentType? @relation(fields: [documentTypeId], references: [id])
+  scopeType         String?  // nasional, distrik, wilayah, ranting
+  scopeId           Int?
+  name              String
+  position          String
+  signatureFilePath String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  issuedDocuments IssuedDocument[]
+
+  @@map("document_signers")
+}
+
+model DocumentStamp {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  documentTypeId Int?
+  documentType   DocumentType? @relation(fields: [documentTypeId], references: [id])
+  scopeType      String?  // nasional, distrik, wilayah, ranting
+  scopeId        Int?
+  name           String
+  stampFilePath  String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  issuedDocuments IssuedDocument[]
+
+  @@map("document_stamps")
+}
+
+model IssuedDocument {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  documentTypeId  Int
+  documentType    DocumentType @relation(fields: [documentTypeId], references: [id])
+  anggotaId       Int?
+  anggota         Anggota?       @relation(fields: [anggotaId], references: [id])
+  calonAnggotaId  Int?
+  calonAnggota    CalonAnggota?  @relation(fields: [calonAnggotaId], references: [id])
+  kegiatanId      Int?
+  kegiatan        Kegiatan?      @relation(fields: [kegiatanId], references: [id])
+  nomorDokumen    String   @unique
+  title           String
+  status          String   @default("draft") // draft, issued, revoked
+  issuedAt        DateTime?
+  issuedBy        Int?
+  penerbit        User?    @relation(fields: [issuedBy], references: [id])
+  templateId      Int
+  template        DocumentTemplate @relation(fields: [templateId], references: [id])
+  signerId        Int?
+  signer          DocumentSigner?  @relation(fields: [signerId], references: [id])
+  stampId         Int?
+  stamp           DocumentStamp?   @relation(fields: [stampId], references: [id])
+  filePath        String?
+  qrToken         String   @unique
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  validationLogs DocumentValidationLog[]
+
+  @@map("issued_documents")
+}
+
+model DocumentValidationLog {
+  id                Int      @id @default(autoincrement())
+  uuid              String   @unique @default(uuid())
+  issuedDocumentId  Int?
+  issuedDocument    IssuedDocument? @relation(fields: [issuedDocumentId], references: [id])
+  qrToken           String
+  validationResult  String   // valid, revoked, not_found
+  validatedBy       Int
+  validatedAt       DateTime @default(now())
+  notes             String?
+
+  @@map("document_validation_logs")
+}
+
+// ═══════════════════════════════════════════
+// ORGANISASI DOKUMEN (Pustaka Organisasi)
+// ═══════════════════════════════════════════
+
+model OrganisasiDokumen {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  judul          String
+  deskripsi      String?
+  kategori       String   // statuta, kurikulum, struktur_organisasi, pedoman, materi, lainnya
+  filePath       String
+  scopeType      String?  // nasional, distrik, wilayah, ranting
+  scopeId        Int?
+  aksesRoles     Json?
+  aksesTingkatan Json?
+  isPublic       Boolean  @default(false)
+  uploadedBy     Int
+  pengupload     User     @relation(fields: [uploadedBy], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("organisasi_dokumen")
+}
+
+// ═══════════════════════════════════════════
+// SURAT — Mail Management
+// ═══════════════════════════════════════════
+
+model SuratMasuk {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  nomorSurat   String
+  tanggalSurat DateTime
+  tanggalTerima DateTime
+  pengirim     String
+  perihal      String
+  filePath     String?
+  scopeType    String?  // nasional, distrik, wilayah, ranting
+  scopeId      Int?
+  diterimaOleh Int
+  penerima     User     @relation(fields: [diterimaOleh], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("surat_masuk")
+}
+
+model SuratKeluar {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  nomorSurat  String
+  tanggalSurat DateTime
+  penerima    String
+  perihal     String
+  filePath    String?
+  scopeType   String?  // nasional, distrik, wilayah, ranting
+  scopeId     Int?
+  dibuatOleh  Int
+  pembuat     User     @relation(fields: [dibuatOleh], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("surat_keluar")
+}
+
+// ═══════════════════════════════════════════
+// IMPORT — CSV/Data Import Tracking
+// ═══════════════════════════════════════════
+
+model ImportJob {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  importType   String   // anggota, calon_anggota, aspek_penilaian, item_penilaian
+  fileName     String
+  filePath     String?
+  status       String   @default("pending") // pending, processing, completed, failed
+  totalRows    Int      @default(0)
+  successRows  Int      @default(0)
+  warningRows  Int      @default(0)
+  errorRows    Int      @default(0)
+  importedBy   Int
+  pengimport   User     @relation(fields: [importedBy], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  rowLogs ImportRowLog[]
+
+  @@map("import_jobs")
+}
+
+model ImportRowLog {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  importJobId     Int
+  importJob       ImportJob @relation(fields: [importJobId], references: [id])
+  rowNumber       Int
+  rawData         Json?
+  status          String   // success, warning, error
+  messages        Json?
+  createdRecordId String?
+  createdAt       DateTime @default(now())
+
+  @@map("import_row_logs")
+}
+
+// ═══════════════════════════════════════════
+// KONTEN — Content Management
+// ═══════════════════════════════════════════
+
+model Konten {
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique @default(uuid())
+  judul         String
+  jenis         String    // Berita, Artikel, Video, Acara
+  konten        String    @db.Text
+  ringkasan     String?
+  thumbnailUrl  String?
+  status        String    @default("Draft") // Draft, Menunggu Persetujuan, Dipublikasikan, Ditolak
+  penulisId     Int
+  penulis       User      @relation("PenulisKonten", fields: [penulisId], references: [id])
+  reviewerId    Int?
+  reviewer      User?     @relation("ReviewerKonten", fields: [reviewerId], references: [id])
+  catatanReview String?
+  scopeType     String?   // nasional, distrik, wilayah, ranting
+  scopeId       Int?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("konten")
+}
+
+// ═══════════════════════════════════════════
+// PUSTAKA — Digital Library
+// ═══════════════════════════════════════════
+
+model Pustaka {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  judul        String
+  deskripsi    String?
+  jenis        String   // Buku, Modul, Materi, Dokumen
+  fileUrl      String
+  thumbnailUrl String?
+  isPublic     Boolean  @default(false)
+  uploadedBy   Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("pustaka")
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS & AUDIT
+// ═══════════════════════════════════════════
+
+model Notification {
+  id            Int      @id @default(autoincrement())
+  uuid          String   @unique @default(uuid())
+  recipientUserId Int
+  recipient     User     @relation(fields: [recipientUserId], references: [id])
+  title         String
+  body          String
+  type          String?  // otp, info, warning, approval, document
+  data          Json?
+  isRead        Boolean  @default(false)
+  sentViaFcm    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique @default(uuid())
+  actorUserId Int
+  actor      User     @relation(fields: [actorUserId], references: [id])
+  action     String   // LOGIN, APPROVE, GENERATE_DOCUMENT, UPDATE_ANGGOTA, etc.
+  entityName String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}

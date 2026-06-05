@@ -1,0 +1,110 @@
+# THS-THM Render Blueprint
+# ========================
+# Infrastructure-as-Code for Render.com deployment.
+#
+# Steps:
+#   1. Push this file to GitHub repo
+#   2. In Render Dashboard: Blueprint → New Blueprint → Connect repo
+#   3. Render auto-provisions: PostgreSQL, Redis, API service, Web-Admin service
+#   4. Fill in manual env vars (S3 credentials, Firebase, JWT_SECRET if not auto-generated)
+#
+# Manual env vars to set after provisioning:
+#   - API: MINIO_ACCESS_KEY, MINIO_SECRET_KEY, FIREBASE_* (if using FCM)
+#   - Both: JWT_SECRET (if Render auto-generation doesn't meet your needs)
+
+services:
+  # ── API: NestJS Backend ──────────────────────────────────────────────
+  - type: web
+    name: ths-thm-api
+    runtime: docker
+    # repo: auto-populated by Render when connecting via Dashboard
+    # For CLI/API deployment, replace YOUR_ORG with your GitHub org
+    repo: https://github.com/YOUR_ORG/ths-thm-project
+    branch: main
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    preDeployCommand: cd apps/api && npx prisma generate && npx prisma migrate deploy
+    autoDeploy: false  # CI/CD via GitHub Actions (Blueprint Sync API) controls deploys
+    plan: starter  # $7/mo — upgrade as needed (max $29/mo for 2x CPU / 4GB RAM)
+    envVars:
+      # Database — auto-populated by Render PostgreSQL
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ths-thm-db
+          property: connectionString
+
+      # Redis — auto-populated by Render Key Value
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ths-thm-redis
+          property: connectionString
+
+      # Security
+      - key: JWT_SECRET
+        generateValue: true
+
+      # CORS — allow web-admin origin
+      - key: CORS_ORIGIN
+        value: https://ths-thm-admin.onrender.com
+
+      # Production settings
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: API_PORT
+        value: "4000"
+
+      # S3-compatible storage (was MinIO, use Cloudflare R2 / AWS S3 / Backblaze B2)
+      # Set MINIO_ENDPOINT and credentials manually in Render Dashboard
+      - key: MINIO_ENDPOINT
+        value: s3.ap-southeast-1.amazonaws.com  # change to your S3 provider endpoint
+      - key: MINIO_PORT
+        value: "443"
+      - key: MINIO_USE_SSL
+        value: "true"
+      - key: MINIO_BUCKET
+        value: ths-thm-docs
+      - key: MINIO_ACCESS_KEY
+        sync: false  # set manually in Dashboard
+      - key: MINIO_SECRET_KEY
+        sync: false  # set manually in Dashboard
+
+      # Chromium path (for PDF generation in Docker)
+      - key: CHROMIUM_PATH
+        value: /usr/bin/chromium-browser
+
+  # ── Web-Admin: Next.js Frontend ─────────────────────────────────────
+  - type: web
+    name: ths-thm-admin
+    runtime: node
+    # repo: auto-populated by Render when connecting via Dashboard
+    # For CLI/API deployment, replace YOUR_ORG with your GitHub org
+    repo: https://github.com/YOUR_ORG/ths-thm-project
+    branch: main
+    buildCommand: npm install -g pnpm@10 && pnpm install --filter @ths-thm/web-admin && pnpm --filter @ths-thm/web-admin build
+    startCommand: pnpm --filter @ths-thm/web-admin start
+    healthCheckPath: /
+    autoDeploy: false  # CI/CD via GitHub Actions (Blueprint Sync API) controls deploys
+    plan: starter
+    envVars:
+      # API URL — must be absolute URL to the API service
+      # NEXT_PUBLIC_* vars are baked at BUILD time
+      - key: NEXT_PUBLIC_API_URL
+        value: https://ths-thm-api.onrender.com/api/v1
+
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: ths-thm-db
+    plan: starter        # 256 MB RAM, 1 GB disk — $7/mo
+    postgresMajorVersion: 16
+    ipAllowList: []      # allow all (Render internal network is secure)
+
+redis:
+  - name: ths-thm-redis
+    plan: starter        # 256 MB RAM — $7/mo
+    maxmemoryPolicy: allkeys-lru

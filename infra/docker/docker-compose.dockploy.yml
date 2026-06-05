@@ -1,0 +1,150 @@
+# THS-THM Dockploy Deployment
+# ============================
+# This compose file is designed to be uploaded via Dockploy UI.
+# It excludes nginx — Traefik (built into Dockploy) handles routing & SSL.
+#
+# Usage:
+#   1. Upload this file as a Stack in Dockploy UI
+#   2. Set environment variables in Dockploy UI
+#   3. Map domains:
+#      - api.ths-thm.cloud  → service `api` port 4000
+#      - admin.ths-thm.cloud → service `web-admin` port 3000
+#   4. Deploy
+
+version: "3.8"
+
+services:
+  # ─── Database ────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ths-thm-postgres
+    restart: unless-stopped
+    # No host port needed — accessed internally by api service
+    ports:
+      - "5432"
+    environment:
+      POSTGRES_USER: ths_thm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ths_thm_secret}
+      POSTGRES_DB: ths_thm_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ths_thm -d ths_thm_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ─── Cache (Valkey/Redis) ────────────────────────────────
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: ths-thm-valkey
+    restart: unless-stopped
+    ports:
+      - "6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Object Storage (MinIO) ──────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: ths-thm-minio
+    restart: unless-stopped
+    ports:
+      - "9000"
+      - "9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── API (NestJS) ────────────────────────────────────────
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: ths-thm-api
+    restart: unless-stopped
+    ports:
+      - "4000"
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+
+      # Database
+      DATABASE_URL: "postgresql://ths_thm:${POSTGRES_PASSWORD:-ths_thm_secret}@postgres:5432/ths_thm_db?schema=public"
+
+      # Cache
+      REDIS_URL: "redis://valkey:6379"
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY: "15m"
+      JWT_REFRESH_EXPIRY: "7d"
+
+      # MinIO / S3
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ths-thm-docs
+      MINIO_USE_SSL: "false"
+      S3_REGION: auto
+
+      # Firebase
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+
+      # CORS — allow web-admin domain
+      CORS_ORIGIN: https://admin.ths-thm.cloud
+
+      # Trust proxy — Traefik sits in front
+      TRUST_PROXY: "1"
+
+      # Document generation
+      DOCUMENTS_STORAGE: minio
+      UPLOAD_DIR: ./uploads
+
+      # Puppeteer / Chromium
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "true"
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ─── Web Admin (Next.js) ────────────────────────────────
+  web-admin:
+    build:
+      context: ../..
+      dockerfile: apps/web-admin/Dockerfile
+    container_name: ths-thm-web-admin
+    restart: unless-stopped
+    ports:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: "https://api.ths-thm.cloud/api/v1"
+      NEXT_PUBLIC_APP_NAME: "THS-THM Admin"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  valkey_data:
+  minio_data:

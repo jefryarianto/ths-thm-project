@@ -1,0 +1,44 @@
+@startuml
+title DFD Level 2 - Manajemen Iuran & Pembayaran
+
+actor Superadmin
+actor Admin_Distrik
+actor Admin_Wilayah
+actor Admin_Ranting
+actor Anggota
+
+rectangle "Modul Iuran" {
+    (Kelola Jenis Iuran)
+    (Bayar Iuran oleh Anggota)
+    (Upload Bukti Bayar)
+    (Verifikasi Pembayaran)
+    (Riwayat Pembayaran Anggota)
+    (Laporan & Statistik Iuran)
+    (Notifikasi Tagihan Iuran)
+}
+
+Superadmin --> (Kelola Jenis Iuran)
+Admin_Distrik --> (Kelola Jenis Iuran)
+Admin_Distrik --> (Verifikasi Pembayaran)
+Admin_Wilayah --> (Verifikasi Pembayaran)
+Admin_Ranting --> (Verifikasi Pembayaran)
+Anggota --> (Bayar Iuran oleh Anggota)
+Anggota --> (Upload Bukti Bayar)
+Anggota --> (Riwayat Pembayaran Anggota)
+
+(Bayar Iuran oleh Anggota) --> (Upload Bukti Bayar)
+(Upload Bukti Bayar) --> (Verifikasi Pembayaran)
+(Verifikasi Pembayaran) --> (Laporan & Statistik Iuran)
+(Kelola Jenis Iuran) --> (Notifikasi Tagihan Iuran)
+(Notifikasi Tagihan Iuran) --> (Bayar Iuran oleh Anggota)
+(Riwayat Pembayaran Anggota) --> (Laporan & Statistik Iuran)
+
+(Kelola Jenis Iuran) --> database "DB Jenis Iuran"
+(Bayar Iuran oleh Anggota) --> database "DB Pembayaran Iuran"
+(Upload Bukti Bayar) --> database "DB MinIO/S3 Storage"
+(Verifikasi Pembayaran) --> database "DB Pembayaran Iuran"
+(Laporan & Statistik Iuran) --> database "DB Pembayaran Iuran"
+(Notifikasi Tagihan Iuran) --> database "DB Notifikasi"
+(Riwayat Pembayaran Anggota) --> database "DB Pembayaran Iuran"
+
+@enduml

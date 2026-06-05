@@ -1,0 +1,39 @@
+@startuml
+title DFD Level 0 - Diagram Konteks THS-THM System Manajemen
+
+left to right direction
+
+actor Superadmin
+actor Admin_Distrik
+actor Admin_Wilayah
+actor Admin_Ranting
+actor Admin_Kegiatan
+actor Penguji
+actor Anggota
+actor Firebase_FCM as FCM
+actor MinIO_S3 as S3
+actor Public_User
+
+rectangle "SISTEM INFORMASI MANAJEMEN THS-THM" as System {
+  (Proses Data Anggota & Calon Anggota)
+  (Proses Kegiatan & Latihan)
+  (Proses Pendadaran & Penilaian)
+  (Proses Iuran & Pembayaran)
+  (Proses Dokumen & Verifikasi)
+  (Proses Surat & Arsip)
+  (Proses Notifikasi & Audit)
+}
+
+Superadmin --> System : Kelola semua data
+Admin_Distrik --> System : Kelola data distrik
+Admin_Wilayah --> System : Kelola data wilayah
+Admin_Ranting --> System : Input calon anggota & laporkan latihan
+Admin_Kegiatan --> System : Buat kegiatan & daftarkan peserta
+Penguji --> System : Input nilai pendadaran
+Anggota --> System : Lihat profil, klaim anggota, bayar iuran, unduh dokumen
+
+System --> FCM : Kirim push notification via Firebase
+System --> S3 : Simpan/ambil file (foto, dokumen, bukti bayar)
+Public_User --> System : Verifikasi QR dokumen
+
+@enduml

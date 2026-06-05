@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.next/
+.expo/
+*.tsbuildinfo
+.env
+.env.local
+.env.production
+*.log
+uploads/
+.DS_Store
+coverage/
+
+# Firebase credentials
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/*.key.json
+**/service-account*.json

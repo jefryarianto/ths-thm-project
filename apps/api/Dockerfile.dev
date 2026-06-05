@@ -1,0 +1,20 @@
+FROM node:22-alpine
+
+RUN npm i -g pnpm@10
+
+WORKDIR /app
+
+# Copy only manifest files for dependency installation
+COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
+COPY packages/templates/package.json packages/templates/
+
+# Install all workspace dependencies
+RUN pnpm install --no-frozen-lockfile --filter @ths-thm/api --filter @ths-thm/shared --filter @ths-thm/templates
+
+# Copy Prisma schema and generate client
+COPY apps/api/prisma ./apps/api/prisma
+RUN pnpm --filter @ths-thm/api run prisma:generate
+
+EXPOSE 4000

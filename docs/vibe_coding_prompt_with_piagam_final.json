@@ -1,0 +1,40 @@
+{
+  "project_name": "THS-THM Management System",
+  "files": ["vibe_coding_full_package_updated.zip"],
+  "description": "Implementasikan seluruh sistem THS-THM sesuai SPEC, termasuk template kartu, sertifikat, piagam A4 landscape, pipeline generate dokumen, workflow approval calon anggota.",
+  "architecture_type": "TypeScript monorepo",
+  "recommended_stack": {
+    "backend": "NestJS + TypeScript",
+    "database": "PostgreSQL 18 + Prisma ORM",
+    "cache_queue": "Valkey",
+    "auth": "JWT + OTP via FCM",
+    "file_storage": "S3-compatible storage",
+    "web_admin": "Next.js 16 + React + TypeScript",
+    "mobile_app": "Expo React Native + TypeScript"
+  },
+  "workflow_calon_anggota": {
+    "admin_ranting": "Input manual atau import CSV, harus diapprove oleh superadmin/admin wilayah/admin distrik/admin kegiatan (default)",
+    "admin_kegiatan": "Input manual atau import CSV tanpa approval"
+  },
+  "core_tasks": [
+    "Buat monorepo structure",
+    "Integrasikan semua JSX templates: kartu, sertifikat, piagam A4 landscape",
+    "Implementasikan database schema dengan integer internal IDs dan UUID public/exposed entities",
+    "Implementasikan modul backend NestJS termasuk auth, anggota, calon anggota, kegiatan, latihan, iuran, pendadaran, tim pendadaran, SK, kartu, sertifikat, piagam, konten organisasi, pustaka, surat, notifications, audit log",
+    "Workflow approval calon anggota sesuai role",
+    "Konversi otomatis calon anggota yang lulus pendadaran menjadi anggota resmi",
+    "Pipeline generate PDF/PNG dari semua template JSX",
+    "Implementasikan web admin dan mobile screens",
+    "Testing, CI/CD, deployment, docker-compose setup"
+  ],
+  "output_required": [
+    "Web admin fully functional",
+    "Mobile app untuk anggota dan pelatih",
+    "Database PostgreSQL + Prisma migrations",
+    "Seed data scripts",
+    "Document generation pipeline untuk kartu, sertifikat, piagam A4 landscape",
+    "Workflow calon anggota dengan approval",
+    "Docker Compose local development setup",
+    "README implementation guide"
+  ]
+}

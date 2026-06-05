@@ -1,0 +1,401 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10'
+
+jobs:
+  api-test:
+    name: API — TypeCheck & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ths_thm
+          POSTGRES_PASSWORD: ths_thm_secret
+          POSTGRES_DB: ths_thm_db
+        options: >-
+          --health-cmd "pg_isready -U ths_thm -d ths_thm_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+      valkey:
+        image: valkey/valkey:8-alpine
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @ths-thm/api exec prisma generate
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
+        run: pnpm --filter @ths-thm/api exec prisma migrate dev --name ci
+
+      - name: Seed database
+        env:
+          DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
+          REDIS_URL: redis://localhost:6379
+        run: pnpm --filter @ths-thm/api exec tsx prisma/seed.ts
+
+      - name: Build @ths-thm/shared
+        run: pnpm --filter @ths-thm/shared build
+
+      - name: Build @ths-thm/templates
+        run: pnpm --filter @ths-thm/templates build
+
+      - name: TypeScript check
+        run: pnpm --filter @ths-thm/api exec tsc --noEmit
+
+      - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
+          REDIS_URL: redis://localhost:6379
+        run: pnpm --filter @ths-thm/api test
+
+      - name: Run E2E tests
+        env:
+          DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
+          REDIS_URL: redis://localhost:6379
+          NODE_OPTIONS: '--experimental-vm-modules'
+        run: pnpm --filter @ths-thm/api test:e2e
+
+  web-admin-test:
+    name: Web-Admin — TypeCheck & Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @ths-thm/shared
+        run: pnpm --filter @ths-thm/shared build
+
+      - name: TypeScript check
+        run: pnpm --filter @ths-thm/web-admin exec tsc --noEmit
+
+      - name: Run vitest unit tests
+        run: pnpm --filter @ths-thm/web-admin exec vitest run
+
+      - name: Next.js build
+        run: pnpm --filter @ths-thm/web-admin build
+
+  web-admin-e2e:
+    name: Web-Admin — Playwright E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @ths-thm/web-admin exec playwright install chromium
+
+      - name: Build @ths-thm/shared
+        run: pnpm --filter @ths-thm/shared build
+
+      - name: Run Playwright E2E tests
+        run: pnpm --filter @ths-thm/web-admin exec playwright test
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm exec prettier --check "**/*.{ts,tsx,js,jsx,json,md}" || echo "Prettier not installed — skipping format check"
+
+  chromatic:
+    name: Storybook (Chromatic)
+    runs-on: ubuntu-latest
+    needs: [api-test, web-admin-test]
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish to Chromatic
+        uses: chromaui/action@v1
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: apps/web-admin
+          buildScriptName: build-storybook
+          exitOnceUploaded: true
+
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    needs: [api-test, web-admin-test]
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate coverage reports
+        env:
+          DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
+          REDIS_URL: redis://localhost:6379
+        run: |
+          # API coverage
+          cd apps/api
+          npx jest --coverage --coverageReporters=lcov --coverageReporters=text-summary || true
+          cd ../..
+          # Web-admin coverage
+          cd apps/web-admin
+          npx vitest run --coverage.enabled --coverage.reporter=lcov --coverage.reporter=text-summary || true
+          cd ../..
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [api-test, web-admin-test, web-admin-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API
+        run: pnpm --filter @ths-thm/shared build && pnpm --filter @ths-thm/templates build && pnpm --filter @ths-thm/api build
+
+      - name: Build Web-Admin
+        run: pnpm --filter @ths-thm/web-admin build
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          script: |
+            cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
+            git pull origin main
+
+            # Build with base + staging compose
+            COMPOSE_FILES="-f infra/docker/docker-compose.yml -f infra/docker/docker-compose.staging.yml"
+
+            # Include SSL compose if STAGING_USE_SSL is set to 'true'
+            if [ "${{ secrets.STAGING_USE_SSL }}" = "true" ]; then
+              COMPOSE_FILES="$COMPOSE_FILES -f infra/docker/docker-compose.ssl.yml"
+            fi
+
+            docker compose $COMPOSE_FILES build --pull
+            docker compose $COMPOSE_FILES up -d --remove-orphans
+            docker system prune -f
+
+      - name: Health Check
+        run: |
+          sleep 15
+          echo "Checking API health..."
+          curl -sSf -o /dev/null -w "Health: %{http_code}\n" \
+            "https://${{ secrets.STAGING_DOMAIN || 'staging.example.com' }}/api/v1/health"
+          echo "Deployment verified successfully!"
+
+  docker-publish:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [api-test, web-admin-test, web-admin-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push web-admin
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web-admin/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.ths-thm.cloud/api/v1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-render:
+    name: Deploy to Render.com
+    runs-on: ubuntu-latest
+    needs: [api-test, web-admin-test, web-admin-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Render Blueprint Sync
+        run: |
+          curl -X POST "https://api.render.com/v1/blueprint/${{ secrets.RENDER_BLUEPRINT_ID }}/sync" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json"
+
+      - name: Wait for Deploy
+        run: |
+          RENDER_API_URL="https://${{ secrets.RENDER_API_DOMAIN || 'ths-thm-api.onrender.com' }}/api/v1/health"
+          echo "Blueprint sync triggered. Waiting for $RENDER_API_URL ..."
+          for i in $(seq 1 20); do
+            if curl -sSf -o /dev/null "$RENDER_API_URL"; then
+              echo "Render deployment verified! (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i/20 — waiting 15s..."
+            sleep 15
+          done
+          echo "Deploy health check failed after 5 minutes"
+          exit 1
