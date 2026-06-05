@@ -12,7 +12,7 @@
     "build:shared": "pnpm --filter @ths-thm/shared build",
     "build:templates": "pnpm --filter @ths-thm/templates build",
     "build:ui": "pnpm --filter @ths-thm/ui build",
-    "build:all": "pnpm --filter @ths-thm/shared build && pnpm --filter @ths-thm/templates build && pnpm --filter @ths-thm/ui build && pnpm --filter @ths-thm/api build",
+    "build:all": "pnpm --filter @ths-thm/shared build && pnpm --filter @ths-thm/templates build && pnpm --filter @ths-thm/api build",
     "dev:api:watch": "pnpm --filter @ths-thm/api dev:watch",
     "db:migrate": "pnpm --filter @ths-thm/api exec prisma migrate dev",
     "db:seed": "pnpm --filter @ths-thm/api exec prisma db seed",

@@ -25,10 +25,10 @@ ths-thm-management/
 
 | Layer | Technology |
 |-------|------------|
-| **Runtime** | Node.js 24 LTS |
+| **Runtime** | Node.js 22 LTS |
 | **Package Manager** | pnpm workspaces |
 | **Backend** | NestJS + TypeScript |
-| **Database** | PostgreSQL 18 + Prisma ORM |
+| **Database** | PostgreSQL 16 + Prisma ORM |
 | **Cache** | Valkey (Redis-compatible) |
 | **File Storage** | MinIO (S3-compatible) |
 | **Auth** | JWT + OTP + FCM |
@@ -96,13 +96,13 @@ pnpm dev:mobile
 
 After seeding:
 
-| Role | Username | Password |
-|------|----------|----------|
-| **Superadmin** | `admin` | `admin123` |
-| **Pelatih** | `pelatih1` | `pelatih123` |
-| **Anggota** | `yohanes.don.bosco` | `anggota123` |
-| **Anggota** | `maria.goreti` | `anggota123` |
-| **Anggota** | `petrus.paulus` | `anggota123` |
+| Role | Email | Password |
+|------|-------|----------|
+| **Superadmin** | `admin@ths-thm.org` | `admin123` |
+| **Pelatih** | `pelatih@ths-thm.org` | `pelatih123` |
+| **Anggota** | `yohanes.don.bosco@ths-thm.org` | `anggota123` |
+| **Anggota** | `maria.goreti@ths-thm.org` | `anggota123` |
+| **Anggota** | `petrus.paulus@ths-thm.org` | `anggota123` |
 
 ## 📚 API Documentation
 
@@ -231,16 +231,15 @@ MINIO_BUCKET=ths-thm-docs
 
 # JWT
 JWT_SECRET=your-super-secret-key-change-in-production
-JWT_EXPIRES_IN=15m
+JWT_ACCESS_EXPIRY=15m
+JWT_REFRESH_EXPIRY=7d
 
 # API
 API_PORT=4000
 CORS_ORIGIN=http://localhost:3000
 
-# Firebase (for FCM)
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=your-client-email
-FIREBASE_PRIVATE_KEY=your-private-key
+# Firebase (for FCM) — use one of three options, see .env.example for details
+FIREBASE_SERVICE_ACCOUNT_JSON='{...}'
 ```
 
 ## 📊 Project Status
