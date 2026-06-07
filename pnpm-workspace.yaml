@@ -6,6 +6,7 @@ allowBuilds:
   '@firebase/util': true
   '@nestjs/core': set this to true or false
   core-js-pure: set this to true or false
+  msw: set this to true or false
 
 onlyBuiltDependencies:
   - "@firebase/util"
