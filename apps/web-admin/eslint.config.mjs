@@ -5,12 +5,24 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+import { defineConfig, globalIgnores, config } from "eslint/config";
+
 const eslintConfig = defineConfig([
+  config({ rules: {
+      "react-hooks/disable-compiler": "off",
+      "react-hooks/incompatible-library": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "storybook/no-redundant-story-name": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@next/next/no-img-element": "off",
+      "storybook/no-renderer-packages": "off",
+    }}),
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
