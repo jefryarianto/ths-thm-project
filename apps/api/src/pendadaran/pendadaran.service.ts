@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class PendadaranService {
   constructor(private prisma: PrismaService) {}
 
-  // ─── Aspek & Item Penilaian (Master Data) ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Aspek & Item Penilaian (Master Data) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async getAspek() {
     return this.prisma.aspekPenilaian.findMany({
       include: { itemPenilaian: { orderBy: { urutan: 'asc' } } },
@@ -24,6 +24,28 @@ export class PendadaranService {
     return this.prisma.aspekPenilaian.create({ data });
   }
 
+  async findAspekById(id: number) {
+    const aspek = await this.prisma.aspekPenilaian.findUnique({
+      where: { id },
+      include: { itemPenilaian: { orderBy: { urutan: 'asc' } } },
+    });
+    if (!aspek) throw new NotFoundException('Aspek not found');
+    return aspek;
+  }
+
+  async updateAspek(id: number, data: { kodeAspek?: string; namaAspek?: string; deskripsi?: string; bobot?: number; isActive?: boolean }) {
+    const aspek = await this.prisma.aspekPenilaian.findUnique({ where: { id } });
+    if (!aspek) throw new NotFoundException('Aspek not found');
+    return this.prisma.aspekPenilaian.update({ where: { id }, data });
+  }
+
+  async deleteAspek(id: number) {
+    const aspek = await this.prisma.aspekPenilaian.findUnique({ where: { id } });
+    if (!aspek) throw new NotFoundException('Aspek not found');
+    await this.prisma.aspekPenilaian.delete({ where: { id } });
+    return { message: 'Aspek berhasil dihapus' };
+  }
+
   async createItem(data: {
     aspekId: number;
     kodeItem: string;
@@ -35,7 +57,26 @@ export class PendadaranService {
     return this.prisma.itemPenilaian.create({ data });
   }
 
-  // ─── Penguji Kegiatan ───
+  async findItemById(id: number) {
+    const item = await this.prisma.itemPenilaian.findUnique({ where: { id }, include: { aspek: true } });
+    if (!item) throw new NotFoundException('Item not found');
+    return item;
+  }
+
+  async updateItem(id: number, data: { kodeItem?: string; namaItem?: string; skorMaksimal?: number; bobot?: number; urutan?: number; isActive?: boolean }) {
+    const item = await this.prisma.itemPenilaian.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Item not found');
+    return this.prisma.itemPenilaian.update({ where: { id }, data });
+  }
+
+  async deleteItem(id: number) {
+    const item = await this.prisma.itemPenilaian.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Item not found');
+    await this.prisma.itemPenilaian.delete({ where: { id } });
+    return { message: 'Item berhasil dihapus' };
+  }
+
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Penguji Kegiatan Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async assignPenguji(data: {
     kegiatanId: number;
     pengujiUserId: number;
@@ -54,7 +95,14 @@ export class PendadaranService {
     });
   }
 
-  // ─── Input Nilai ───
+  async deletePenguji(id: number) {
+    const penguji = await this.prisma.pengujiKegiatan.findUnique({ where: { id } });
+    if (!penguji) throw new NotFoundException('Penguji not found');
+    await this.prisma.pengujiKegiatan.delete({ where: { id } });
+    return { message: 'Penguji berhasil dihapus' };
+  }
+
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Input Nilai Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async inputNilai(data: {
     kegiatanId: number;
     calonAnggotaId: number;
@@ -105,7 +153,7 @@ export class PendadaranService {
     return results;
   }
 
-  // ─── Hitung Hasil ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Hitung Hasil Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async hitungHasil(kegiatanId: number, calonAnggotaId: number) {
     // Get all nilai for this calon in this kegiatan
     const nilaiList = await this.prisma.nilaiPendadaran.findMany({
@@ -144,38 +192,63 @@ export class PendadaranService {
       ? Math.round((totalWeighted / totalBobot) * 100) / 100
       : 0;
 
-    // Determine ranking (count how many have higher scores)
+
+    const statusKelulusan = totalSkor >= 55 ? 'lulus' : 'gagal';
+
+    // Upsert hasil dulu (ranking sementara)
+    await this.prisma.hasilPendadaran.upsert({
+      where: {
+        kegiatanId_calonAnggotaId: { kegiatanId, calonAnggotaId },
+      },
+      update: { totalSkor, statusKelulusan },
+      create: { kegiatanId, calonAnggotaId, totalSkor, ranking: 0, statusKelulusan },
+    });
+
+    // Recalculate rankings untuk semua calon di kegiatan ini
     const allHasil = await this.prisma.hasilPendadaran.findMany({
       where: { kegiatanId },
       orderBy: { totalSkor: 'desc' },
     });
-    const ranking = allHasil.length + 1;
 
-    const statusKelulusan = totalSkor >= 55 ? 'lulus' : 'gagal';
+    for (let i = 0; i < allHasil.length; i++) {
+      await this.prisma.hasilPendadaran.update({
+        where: { id: allHasil[i].id },
+        data: { ranking: i + 1 },
+      });
+    }
 
-    // Upsert hasil
-    return this.prisma.hasilPendadaran.upsert({
-      where: {
-        kegiatanId_calonAnggotaId: { kegiatanId, calonAnggotaId },
-      },
-      update: { totalSkor, ranking, statusKelulusan },
-      create: { kegiatanId, calonAnggotaId, totalSkor, ranking, statusKelulusan },
+    return this.prisma.hasilPendadaran.findUnique({
+      where: { kegiatanId_calonAnggotaId: { kegiatanId, calonAnggotaId } },
     });
   }
-
-  // ─── Validasi Hasil ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Validasi Hasil Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async validasiHasil(kegiatanId: number, calonAnggotaId: number, adminId: number, status: string) {
-    return this.prisma.hasilPendadaran.update({
+    const hasil = await this.prisma.hasilPendadaran.update({
       where: { kegiatanId_calonAnggotaId: { kegiatanId, calonAnggotaId } },
       data: {
         statusValidasi: status,
         divalidasiOleh: adminId,
         divalidasiAt: new Date(),
       },
+      include: {
+        calonAnggota: { select: { id: true, namaLengkap: true } },
+        kegiatan: { select: { id: true, nama: true } },
+      },
     });
+
+    // Jika hasil pendadaran divalidasi approved, otomatis update status calon
+    if (status === 'approved') {
+      const statusKelulusan = hasil.statusKelulusan === 'lulus' ? 'lulus' : 'gagal';
+      await this.prisma.calonAnggota.update({
+        where: { id: calonAnggotaId },
+        data: { status: statusKelulusan },
+      });
+    }
+
+    return hasil;
   }
 
-  // ─── Query ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Query Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   async findAll(kegiatanId?: number, status?: string, page = 1, limit = 10) {
     const where: any = {};
     if (kegiatanId) where.kegiatanId = kegiatanId;

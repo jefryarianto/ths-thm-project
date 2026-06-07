@@ -179,9 +179,28 @@ Get all calon anggota with pagination.
 Get calon anggota by ID with relations.
 
 ### `PUT /anggota/calon/:id/status` 🔒👑
-Update calon anggota status.
+Update calon anggota status secara manual.
 
 **Body:** `{ "status": "lulus" }`
+
+> Status otomatis diset ke `lulus` atau `gagal` saat hasil pendadaran divalidasi (`PUT /pendadaran/validasi` dengan `status: "approved"`).
+
+### `POST /anggota/calon/:id/konversi` 🔒👑
+Konversi calon anggota yang sudah berstatus `lulus` menjadi anggota aktif. Roles: superadmin, admin_distrik.
+
+**Body:**
+```json
+{
+  "nomorAnggota": "THS-2026-010",
+  "tingkat": "Tamtama"
+}
+```
+
+**Proses yang terjadi secara otomatis dalam satu transaksi:**
+1. Buat record `Anggota` baru dari data calon
+2. Assign `AnggotaRole` dengan `roleCode: "anggota"`
+
+> Hanya bisa dilakukan jika `status === "lulus"`. `nomorAnggota` wajib unik.
 
 ### Anggota Roles
 
@@ -208,6 +227,54 @@ Get all update requests with pagination.
 Review and approve/reject update request.
 
 **Body:** `{ "status": "approved", "catatanAdmin": "Data valid" }`
+
+---
+
+## Pendaftaran Anggota
+
+### `POST /anggota/pendaftaran`
+Daftar sebagai anggota baru. **Tidak perlu login.** `noHp` wajib diisi.
+
+**Body:**
+```json
+{
+  "namaLengkap": "Budi Santoso",
+  "jenisKelamin": "L",
+  "noHp": "08123456789",
+  "rantingId": 1,
+  "tempatLahir": "Jakarta",
+  "tanggalLahir": "2000-05-10",
+  "email": "budi@example.com",
+  "alamat": "Jl. Merdeka No. 5"
+}
+```
+**Response:** Data pendaftaran dengan status `pending`. Admin menerima notifikasi otomatis.
+
+### `GET /anggota/pendaftaran` 🔒👑
+Get semua pendaftaran anggota (superadmin / admin_distrik).
+
+**Query:** `?page=1&limit=10&status=pending&rantingId=1`
+
+**Status values:** `pending` · `approved` · `rejected`
+
+### `GET /anggota/pendaftaran/:id` 🔒👑
+Get detail pendaftaran by ID.
+
+### `PUT /anggota/pendaftaran/:id/review` 🔒👑
+Setujui atau tolak pendaftaran. Jika `approved`, record `Anggota` dibuat otomatis.
+
+**Body:**
+```json
+{
+  "status": "approved",
+  "nomorAnggota": "THS-2026-001",
+  "catatanAdmin": "Data lengkap dan valid"
+}
+```
+> `nomorAnggota` wajib diisi saat `status: "approved"`. Tidak bisa di-review ulang setelah diproses.
+
+### `DELETE /anggota/pendaftaran/:id` 🔒👑
+Hapus pendaftaran yang masih berstatus `pending`.
 
 ---
 
@@ -302,13 +369,13 @@ Get all activities with pagination and filters.
 Get activity by ID with full relations.
 
 ### `PUT /kegiatan/:id` 🔒👑
-Update activity.
+Update activity. Roles: superadmin, admin_distrik, admin_kegiatan.
 
 ### `POST /kegiatan/:id/publish` 🔒👑
-Publish activity.
+Publish activity. Roles: superadmin, admin_distrik, admin_kegiatan.
 
 ### `POST /kegiatan/:id/close` 🔒👑
-Close activity.
+Close activity. Roles: superadmin, admin_distrik, admin_kegiatan.
 
 ### `DELETE /kegiatan/:id` 🔒👑
 Delete activity (superadmin only).
@@ -328,7 +395,61 @@ Get all training reports.
 **Query:** `?page=1&limit=10&rantingId=1`
 
 ### `GET /latihan/:id` 🔒
-Get training report by ID with absensi.
+Get training report by ID with absensi, catatan, and dokumentasi.
+
+---
+
+## Catatan Latihan Peserta 🔒
+
+### `POST /latihan/:id/catatan` 🔒
+Add catatan khusus for a peserta in a latihan. Roles: pelatih, admin_distrik, superadmin.
+
+**Body:**
+```json
+{
+  "anggotaId": 1,
+  "calonAnggotaId": null,
+  "catatanKhusus": "Perlu perbaikan teknik pukulan"
+}
+```
+> Isi salah satu antara `anggotaId` atau `calonAnggotaId`.
+
+### `GET /latihan/:id/catatan` 🔒
+Get all catatan peserta for a latihan.
+
+### `PUT /latihan/catatan/:catatanId` 🔒
+Update catatan khusus peserta. Roles: pelatih, admin_distrik, superadmin.
+
+**Body:** `{ "catatanKhusus": "Update catatan..." }`
+
+### `DELETE /latihan/catatan/:catatanId` 🔒
+Delete catatan khusus peserta. Roles: pelatih, admin_distrik, superadmin.
+
+---
+
+## Dokumentasi Latihan 🔒
+
+### `POST /latihan/:id/dokumentasi` 🔒
+Upload foto/video dokumentasi latihan. Roles: pelatih, admin_distrik, superadmin.
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | binary | ✅ | File foto (JPEG/PNG/WEBP) atau video (MP4/MOV), maks 50 MB |
+| `fileType` | string | ✅ | `foto` atau `video` |
+| `urutan` | number | — | Urutan tampilan, auto-increment jika tidak diisi |
+
+### `GET /latihan/:id/dokumentasi` 🔒
+Get all dokumentasi for a latihan. Response menyertakan `fileUrl` (signed URL, valid 1 jam).
+
+### `PUT /latihan/:id/dokumentasi/reorder` 🔒
+Reorder dokumentasi latihan. Roles: pelatih, admin_distrik, superadmin.
+
+**Body:** `{ "orders": [{ "id": 1, "urutan": 2 }, { "id": 2, "urutan": 1 }] }`
+
+### `DELETE /latihan/dokumentasi/:dokumentasiId` 🔒
+Delete dokumentasi latihan dan hapus file dari storage. Roles: pelatih, admin_distrik, superadmin.
 
 ---
 
@@ -373,14 +494,39 @@ Get all aspek penilaian with items.
 ### `POST /pendadaran/aspek` 🔒👑
 Create new aspek penilaian.
 
+### `GET /pendadaran/aspek/:id`
+Get aspek penilaian by ID with items.
+
+### `PUT /pendadaran/aspek/:id` 🔒👑
+Update aspek penilaian.
+
+**Body:** `{ "namaAspek": "...", "bobot": 30, "isActive": true }`
+
+### `DELETE /pendadaran/aspek/:id` 🔒👑
+Delete aspek penilaian.
+
 ### `POST /pendadaran/item` 🔒👑
 Create new item penilaian under aspek.
+
+### `GET /pendadaran/item/:id`
+Get item penilaian by ID.
+
+### `PUT /pendadaran/item/:id` 🔒👑
+Update item penilaian.
+
+**Body:** `{ "namaItem": "...", "skorMaksimal": 100, "bobot": 10, "urutan": 1, "isActive": true }`
+
+### `DELETE /pendadaran/item/:id` 🔒👑
+Delete item penilaian.
 
 ### `POST /pendadaran/penguji` 🔒
 Assign penguji to a kegiatan.
 
 ### `GET /pendadaran/penguji/:kegiatanId`
 Get penguji by kegiatan.
+
+### `DELETE /pendadaran/penguji/:id` 🔒
+Remove penguji from kegiatan. Roles: superadmin, admin_distrik, admin_kegiatan.
 
 ### `POST /pendadaran/nilai` 🔒
 Input a single score for a calon anggota (penguji).
@@ -392,7 +538,9 @@ Bulk input scores for a calon anggota.
 Calculate final score and ranking for a calon.
 
 ### `PUT /pendadaran/validasi` 🔒👑
-Validate/reject pendadaran results.
+Validate/reject pendadaran results. Jika `status: "approved"`, status calon anggota otomatis diperbarui ke `lulus` atau `gagal` sesuai hasil.
+
+**Body:** `{ "kegiatanId": 1, "calonAnggotaId": 1, "status": "approved" }`
 
 ### `GET /pendadaran`
 Get all pendadaran results with filters.
@@ -428,6 +576,112 @@ Download document by type code.
 
 ### `POST /dokumen/:id/revoke` 🔒👑
 Revoke an issued document.
+
+---
+
+## Document Types 🔒
+
+### `POST /dokumen/types` 🔒👑
+Create a new document type (superadmin only).
+
+**Body:** `{ "code": "KARTU_ANGGOTA", "name": "Kartu Anggota", "category": "kartu", "isAutoGenerated": true, "requiresApproval": false }`
+
+**Category values:** `kartu` · `sertifikat` · `piagam` · `surat` · `dokumen_lain`
+
+### `GET /dokumen/types` 🔒
+Get all document types with template & issued document counts.
+
+### `GET /dokumen/types/:id` 🔒
+Get document type by ID with active templates, signers, and stamps.
+
+### `PUT /dokumen/types/:id` 🔒👑
+Update document type (superadmin only).
+
+**Body:** `{ "name": "...", "isActive": true }`
+
+### `DELETE /dokumen/types/:id` 🔒👑
+Soft-delete document type — set `isActive = false` (superadmin only).
+
+---
+
+## Document Templates 🔒
+
+### `POST /dokumen/templates` 🔒👑
+Upload a new document template file. Roles: superadmin, admin_distrik.
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | ✅ | Template file, maks 20 MB |
+| `documentTypeId` | ✅ | ID tipe dokumen |
+| `name` | ✅ | Nama template |
+| `layoutJson` | — | JSON string konfigurasi layout |
+| `scopeType` | — | `nasional` / `distrik` / `wilayah` / `ranting` |
+| `scopeId` | — | ID scope |
+
+### `GET /dokumen/templates` 🔒
+Get all document templates. Filter: `?documentTypeId=1`
+
+### `GET /dokumen/templates/:id` 🔒
+Get template by ID (includes signed file URL).
+
+### `PUT /dokumen/templates/:id` 🔒👑
+Update template metadata (name, layoutJson, isActive, scope).
+
+### `DELETE /dokumen/templates/:id` 🔒👑
+Delete template and remove file from storage (superadmin only).
+
+---
+
+## Document Signers 🔒
+
+### `POST /dokumen/signers` 🔒👑
+Upload signer with signature image. Roles: superadmin, admin_distrik.
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | ✅ | Signature image (PNG/JPEG/WEBP), maks 5 MB |
+| `name` | ✅ | Nama penandatangan |
+| `position` | ✅ | Jabatan |
+| `documentTypeId` | — | Batasi ke tipe dokumen tertentu |
+| `scopeType` / `scopeId` | — | Scope organisasi |
+
+### `GET /dokumen/signers` 🔒
+Get all active signers with signed URLs. Filter: `?documentTypeId=1`
+
+### `PUT /dokumen/signers/:id` 🔒👑
+Update signer name, position, or active status.
+
+### `DELETE /dokumen/signers/:id` 🔒👑
+Delete signer and remove signature file from storage (superadmin only).
+
+---
+
+## Document Stamps 🔒
+
+### `POST /dokumen/stamps` 🔒👑
+Upload organization stamp image. Roles: superadmin, admin_distrik.
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | ✅ | Stamp image (PNG/JPEG/WEBP), maks 5 MB |
+| `name` | ✅ | Nama cap/stempel |
+| `documentTypeId` | — | Batasi ke tipe dokumen tertentu |
+| `scopeType` / `scopeId` | — | Scope organisasi |
+
+### `GET /dokumen/stamps` 🔒
+Get all active stamps with signed URLs. Filter: `?documentTypeId=1`
+
+### `PUT /dokumen/stamps/:id` 🔒👑
+Update stamp name or active status.
+
+### `DELETE /dokumen/stamps/:id` 🔒👑
+Delete stamp and remove image from storage (superadmin only).
 
 ---
 
@@ -469,34 +723,70 @@ Get attendance by training session.
 ## Konten
 
 ### `POST /konten` 🔒
-Create content (requires auth).
+Create content (requires auth). Status awal: `Draft`.
 
-**Body:** `{ "judul": "...", "jenis": "Berita", "konten": "HTML content..." }`
+**Body:** `{ "judul": "...", "jenis": "Berita", "konten": "HTML content...", "ringkasan": "...", "scopeType": "distrik", "scopeId": 1 }`
 
-### `GET /konten` 🔒
-Get all content with pagination (admin).
+**Jenis values:** `Berita` · `Artikel` · `Video` · `Acara`
+
+### `GET /konten` 🔒👑
+Get all content with pagination (superadmin/admin_distrik).
+
+**Query:** `?page=1&limit=10&status=Draft&jenis=Berita`
 
 ### `GET /konten/published`
 Get published content (public).
 
+**Query:** `?jenis=Berita`
+
+### `GET /konten/:id`
+Get content by ID.
+
+### `PUT /konten/:id` 🔒
+Update content (penulis asli only, hanya saat status `Draft` atau `Menunggu Persetujuan`).
+
+**Body:** `{ "judul": "...", "konten": "...", "ringkasan": "..." }`
+
+### `PUT /konten/:id/submit` 🔒
+Submit content for review — ubah status ke `Menunggu Persetujuan` (penulis only).
+
 ### `PUT /konten/:id/review` 🔒👑
-Review and approve/reject content.
+Review and approve/reject content (superadmin/admin_distrik).
 
 **Body:** `{ "status": "Dipublikasikan", "catatanReview": "..." }`
+
+**Status values:** `Dipublikasikan` · `Ditolak`
+
+### `DELETE /konten/:id` 🔒👑
+Delete content (admin only).
 
 ---
 
 ## Pustaka
 
 ### `POST /pustaka` 🔒
-Upload library item.
+Upload library item (requires auth).
 
-**Body:** `{ "judul": "...", "deskripsi": "...", "jenis": "Buku", "fileUrl": "...", "isPublic": true }`
+**Body:** `{ "judul": "...", "deskripsi": "...", "jenis": "Buku", "fileUrl": "...", "thumbnailUrl": "...", "isPublic": true }`
+
+**Jenis values:** `Buku` · `Modul` · `Materi` · `Dokumen`
 
 ### `GET /pustaka`
-Get library items.
+Get public library items.
 
 **Query:** `?page=1&limit=10&jenis=Buku`
+
+### `GET /pustaka/all` 🔒👑
+Get all library items including private (admin only).
+
+### `GET /pustaka/:id`
+Get library item by ID.
+
+### `PUT /pustaka/:id` 🔒👑
+Update library item (admin only).
+
+### `DELETE /pustaka/:id` 🔒👑
+Delete library item (admin only).
 
 ---
 
@@ -601,14 +891,25 @@ Get audit logs (superadmin only).
 | Auth (login, register) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Anggota CRUD | ✅ | ✅ | — | — | — | — | — | — | — |
 | Anggota (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Pendaftaran Anggota (submit) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Pendaftaran Anggota (review/admin) | ✅ | ✅ | — | — | — | — | — | — | — |
+| Konversi Calon → Anggota | ✅ | ✅ | — | — | — | — | — | — | — |
 | Iuran (admin) | ✅ | ✅ | — | ✅ | — | — | — | — | — |
 | Iuran (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Surat | ✅ | ✅ | — | — | — | — | — | — | — |
 | Kegiatan (admin) | ✅ | ✅ | — | — | ✅ | — | — | — | — |
 | Kegiatan (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Latihan (submit) | ✅ | ✅ | — | — | — | ✅ | — | — | — |
+| Latihan (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Catatan Latihan (write) | ✅ | ✅ | — | — | — | ✅ | — | — | — |
+| Catatan Latihan (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Dokumentasi Latihan (upload/delete) | ✅ | ✅ | — | — | — | ✅ | — | — | — |
+| Dokumentasi Latihan (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Pendadaran | ✅ | ✅ | — | — | ✅ | — | ✅ | — | — |
 | Dokumen (generate) | ✅ | ✅ | — | — | ✅ | — | — | — | — |
 | Dokumen (verify) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Dokumen Types/Templates/Signers/Stamps (write) | ✅ | ✅ | — | — | — | — | — | — | — |
+| Dokumen Types/Templates/Signers/Stamps (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Claim (review) | ✅ | ✅ | — | — | — | — | — | — | — |
 | Claim (submit) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Audit | ✅ | — | — | — | — | — | — | — | — |
@@ -616,9 +917,11 @@ Get audit logs (superadmin only).
 | Roles | ✅ | — | — | — | — | — | — | — | — |
 | Organisasi (super) | ✅ | — | — | — | — | — | — | — | — |
 | Organisasi (scope) | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — |
-| Konten (admin) | ✅ | ✅ | — | ✅ | — | — | — | — | — |
+| Konten (create) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Konten (admin) | ✅ | ✅ | — | — | — | — | — | — | — |
 | Pustaka (upload) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Pustaka (read) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Pustaka (update/delete) | ✅ | ✅ | — | — | — | — | — | — | — |
+| Pustaka (read public) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 
 ---

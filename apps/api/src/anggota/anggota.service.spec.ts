@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AnggotaService } from './anggota.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { createPrismaMock } from '../test/mocks/prisma.mock.js';
+import { createNotificationsMock } from '../test/mocks/notifications.mock.js';
 
 // ─── Test data ───
 
@@ -55,6 +57,7 @@ describe('AnggotaService', () => {
       providers: [
         AnggotaService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: createNotificationsMock() },
       ],
     }).compile();
 
@@ -467,6 +470,162 @@ describe('AnggotaService', () => {
         data: { statusValidasi: 'ditolak' },
       });
       expect(result.statusValidasi).toBe('ditolak');
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  createPendaftaran()
+  // ──────────────────────────────────────────────
+
+  describe('createPendaftaran', () => {
+    it('should create pendaftaran and notify admins when rantingId provided', async () => {
+      const notifications = (service as any).notifications;
+      const data = { namaLengkap: 'Budi', jenisKelamin: 'L', noHp: '0812', rantingId: 1 };
+      const mockResult = { id: 1, ...data, status: 'pending' };
+
+      (prisma.pendaftaranAnggota.create as jest.Mock).mockResolvedValue(mockResult);
+      (prisma.ranting.findUnique as jest.Mock).mockResolvedValue({
+        id: 1, nama: 'Ranting A', wilayah: { distrik: { id: 1 } },
+      });
+      (prisma.user.findMany as jest.Mock).mockResolvedValue([{ id: 10 }, { id: 11 }]);
+
+      const result = await service.createPendaftaran(data);
+
+      expect(prisma.pendaftaranAnggota.create).toHaveBeenCalled();
+      expect(notifications.sendBulk).toHaveBeenCalledWith(
+        [10, 11],
+        'Pendaftaran Anggota Baru',
+        expect.stringContaining('Budi'),
+        expect.objectContaining({ type: 'pendaftaran' }),
+      );
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should create pendaftaran without notification when no rantingId', async () => {
+      const notifications = (service as any).notifications;
+      const data = { namaLengkap: 'Budi', jenisKelamin: 'L', noHp: '0812' };
+      (prisma.pendaftaranAnggota.create as jest.Mock).mockResolvedValue({ id: 1, ...data });
+
+      await service.createPendaftaran(data);
+
+      expect(notifications.sendBulk).not.toHaveBeenCalled();
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  reviewPendaftaran()
+  // ──────────────────────────────────────────────
+
+  describe('reviewPendaftaran', () => {
+    const mockPendaftaran = {
+      id: 1, status: 'pending', namaLengkap: 'Budi', jenisKelamin: 'L',
+      rantingId: 1, noHp: '0812', email: null, tempatLahir: null,
+      tanggalLahir: null, alamat: null, ranting: { nama: 'Ranting A' },
+    };
+
+    it('should throw NotFoundException when pendaftaran not found', async () => {
+      (prisma.pendaftaranAnggota.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.reviewPendaftaran(999, 1, { status: 'rejected' })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when pendaftaran already processed', async () => {
+      (prisma.pendaftaranAnggota.findUnique as jest.Mock).mockResolvedValue({ ...mockPendaftaran, status: 'approved' });
+      const { BadRequestException } = await import('@nestjs/common');
+
+      await expect(service.reviewPendaftaran(1, 1, { status: 'approved', nomorAnggota: 'THS-001' })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should approve and create anggota in transaction', async () => {
+      (prisma.pendaftaranAnggota.findUnique as jest.Mock).mockResolvedValue(mockPendaftaran);
+      const mockTx = {
+        pendaftaranAnggota: { update: jest.fn().mockResolvedValue({ ...mockPendaftaran, status: 'approved' }) },
+        anggota: { create: jest.fn().mockResolvedValue({ id: 10 }) },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation((cb: any) => cb(mockTx));
+
+      const result = await service.reviewPendaftaran(1, 1, { status: 'approved', nomorAnggota: 'THS-001' });
+
+      expect(mockTx.anggota.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ nomorAnggota: 'THS-001' }) }),
+      );
+      expect(result.status).toBe('approved');
+    });
+
+    it('should throw BadRequestException when approved without nomorAnggota', async () => {
+      (prisma.pendaftaranAnggota.findUnique as jest.Mock).mockResolvedValue(mockPendaftaran);
+      const mockTx = {
+        pendaftaranAnggota: { update: jest.fn() },
+        anggota: { create: jest.fn() },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation((cb: any) => cb(mockTx));
+      const { BadRequestException } = await import('@nestjs/common');
+
+      await expect(service.reviewPendaftaran(1, 1, { status: 'approved' })).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  konversiCalonKeAnggota()
+  // ──────────────────────────────────────────────
+
+  describe('konversiCalonKeAnggota', () => {
+    const mockCalon = {
+      id: 5, namaLengkap: 'Calon A', jenisKelamin: 'L', rantingId: 1,
+      status: 'lulus', email: 'calon@test.com', noHp: '0812',
+      tempatLahir: 'Jakarta', tanggalLahir: new Date('2000-01-01'), alamat: 'Jl. Test',
+      ranting: { id: 1, nama: 'Ranting A' },
+    };
+
+    it('should throw NotFoundException when calon not found', async () => {
+      (prisma.calonAnggota.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.konversiCalonKeAnggota(999, { nomorAnggota: 'THS-001' }, 1))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when calon status is not lulus', async () => {
+      (prisma.calonAnggota.findUnique as jest.Mock).mockResolvedValue({ ...mockCalon, status: 'diusulkan' });
+      const { BadRequestException } = await import('@nestjs/common');
+
+      await expect(service.konversiCalonKeAnggota(5, { nomorAnggota: 'THS-001' }, 1))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when nomorAnggota already used', async () => {
+      (prisma.calonAnggota.findUnique as jest.Mock).mockResolvedValue(mockCalon);
+      (prisma.anggota.findUnique as jest.Mock).mockResolvedValue({ id: 99, nomorAnggota: 'THS-001' });
+      const { BadRequestException } = await import('@nestjs/common');
+
+      await expect(service.konversiCalonKeAnggota(5, { nomorAnggota: 'THS-001' }, 1))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should create anggota and assign role in transaction', async () => {
+      (prisma.calonAnggota.findUnique as jest.Mock).mockResolvedValue(mockCalon);
+      (prisma.anggota.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.anggota.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const newAnggota = { id: 10, nomorAnggota: 'THS-001', namaLengkap: 'Calon A' };
+      const mockTx = {
+        anggota: { create: jest.fn().mockResolvedValue(newAnggota) },
+        anggotaRole: { create: jest.fn().mockResolvedValue({ id: 1 }) },
+        calonAnggota: { update: jest.fn().mockResolvedValue({}) },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation((cb: any) => cb(mockTx));
+
+      const result = await service.konversiCalonKeAnggota(5, { nomorAnggota: 'THS-001', tingkat: 'Tamtama' }, 1);
+
+      expect(mockTx.anggota.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ nomorAnggota: 'THS-001', tingkat: 'Tamtama', statusKeanggotaan: 'aktif' }),
+        }),
+      );
+      expect(mockTx.anggotaRole.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ roleCode: 'anggota' }) }),
+      );
+      expect(result.anggota).toEqual(newAnggota);
+      expect(result.message).toContain('THS-001');
     });
   });
 });

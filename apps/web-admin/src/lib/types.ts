@@ -543,6 +543,29 @@ export interface OrganisasiDokumen {
 }
 
 // ═══════════════════════════════════════════
+// CLAIM KEANGGOTAAN
+// ═══════════════════════════════════════════
+
+export interface ClaimAnggota {
+  id: number;
+  uuid?: string;
+  userId: number;
+  user?: User;
+  anggotaId?: number;
+  anggota?: Anggota;
+  namaLengkap: string;
+  nomorAnggotaInput: string;
+  nomorUnikKartu?: string;
+  buktiFilePath?: string;
+  status: string; // pending, approved, rejected
+  catatanAdmin?: string;
+  reviewedBy?: number;
+  reviewer?: User;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+// ═══════════════════════════════════════════
 // GENERIC
 // ═══════════════════════════════════════════
 

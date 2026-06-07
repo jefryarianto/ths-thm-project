@@ -195,6 +195,7 @@ describe('KontenService', () => {
         where: { status: 'Dipublikasikan' },
         orderBy: { publishedAt: 'desc' },
         take: 50,
+        include: { penulis: { select: { id: true, name: true } } },
       });
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe('Dipublikasikan');
@@ -209,6 +210,7 @@ describe('KontenService', () => {
         where: { status: 'Dipublikasikan', jenis: 'Berita' },
         orderBy: { publishedAt: 'desc' },
         take: 50,
+        include: { penulis: { select: { id: true, name: true } } },
       });
     });
 
@@ -299,6 +301,134 @@ describe('KontenService', () => {
           publishedAt: expect.any(Date),
         },
       });
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  findById()
+  // ──────────────────────────────────────────────
+
+  describe('findById', () => {
+    it('should return konten by id with penulis and reviewer', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(mockKontenPublished);
+
+      const result = await service.findById(2);
+
+      expect(prisma.konten.findUnique).toHaveBeenCalledWith({
+        where: { id: 2 },
+        include: {
+          penulis: { select: { id: true, name: true } },
+          reviewer: { select: { id: true, name: true } },
+        },
+      });
+      expect(result).toEqual(mockKontenPublished);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.findById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  update()
+  // ──────────────────────────────────────────────
+
+  describe('update', () => {
+    it('should update konten when user is penulis and status is Draft', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(mockKonten);
+      const updated = { ...mockKonten, judul: 'Judul Baru' };
+      (prisma.konten.update as jest.Mock).mockResolvedValue(updated);
+
+      const result = await service.update(1, 1, { judul: 'Judul Baru' });
+
+      expect(prisma.konten.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { judul: 'Judul Baru' },
+      });
+      expect(result.judul).toBe('Judul Baru');
+    });
+
+    it('should throw NotFoundException when konten not found', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.update(999, 1, { judul: 'X' })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException when user is not penulis', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue({ ...mockKonten, penulisId: 5 });
+
+      await expect(service.update(1, 1, { judul: 'X' })).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException when status is Dipublikasikan', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue({ ...mockKonten, status: 'Dipublikasikan', penulisId: 1 });
+
+      await expect(service.update(1, 1, { judul: 'X' })).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  delete()
+  // ──────────────────────────────────────────────
+
+  describe('delete', () => {
+    it('should delete konten by id', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(mockKonten);
+      (prisma.konten.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.delete(1);
+
+      expect(prisma.konten.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Konten berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.delete(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  submitForReview()
+  // ──────────────────────────────────────────────
+
+  describe('submitForReview', () => {
+    it('should change status to Menunggu Persetujuan when Draft', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue({ ...mockKonten, penulisId: 1, status: 'Draft' });
+      (prisma.konten.update as jest.Mock).mockResolvedValue({ ...mockKonten, status: 'Menunggu Persetujuan' });
+
+      const result = await service.submitForReview(1, 1);
+
+      expect(prisma.konten.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { status: 'Menunggu Persetujuan' },
+      });
+      expect(result.status).toBe('Menunggu Persetujuan');
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.submitForReview(999, 1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException when not penulis', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue({ ...mockKonten, penulisId: 5 });
+
+      await expect(service.submitForReview(1, 1)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException when not Draft', async () => {
+      (prisma.konten.findUnique as jest.Mock).mockResolvedValue({ ...mockKonten, penulisId: 1, status: 'Menunggu Persetujuan' });
+
+      await expect(service.submitForReview(1, 1)).rejects.toThrow(ForbiddenException);
     });
   });
 });

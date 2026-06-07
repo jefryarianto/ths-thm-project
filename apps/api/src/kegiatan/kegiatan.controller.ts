@@ -46,7 +46,7 @@ export class KegiatanController {
   }
 
   @Put(':id')
-  @Roles('superadmin', 'admin_distrik')
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
   @ApiOperation({ summary: 'Update activity' })
   update(@Param('id') id: string, @Body() data: {
     nama?: string; tipe?: string; lokasi?: string;
@@ -56,14 +56,14 @@ export class KegiatanController {
   }
 
   @Post(':id/publish')
-  @Roles('superadmin', 'admin_distrik')
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
   @ApiOperation({ summary: 'Publish activity' })
   publish(@Param('id') id: string) {
     return this.kegiatanService.publish(+id);
   }
 
   @Post(':id/close')
-  @Roles('superadmin', 'admin_distrik')
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
   @ApiOperation({ summary: 'Close activity' })
   close(@Param('id') id: string) {
     return this.kegiatanService.close(+id);

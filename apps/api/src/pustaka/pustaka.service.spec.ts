@@ -123,4 +123,71 @@ describe('PustakaService', () => {
       expect(result.meta).toEqual({ total: 45, page: 3, limit: 20, totalPages: 3 });
     });
   });
+
+  // ─── findById ───
+
+  describe('findById', () => {
+    it('should return pustaka by id', async () => {
+      const item = { id: 1, judul: 'Buku A', jenis: 'Buku' };
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue(item);
+
+      const result = await service.findById(1);
+
+      expect(prisma.pustaka.findUnique).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual(item);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.findById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── update ───
+
+  describe('update', () => {
+    it('should update pustaka fields', async () => {
+      const item = { id: 1, judul: 'Buku A' };
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue(item);
+      (prisma.pustaka.update as jest.Mock).mockResolvedValue({ ...item, judul: 'Buku Updated' });
+
+      const result = await service.update(1, { judul: 'Buku Updated' });
+
+      expect(prisma.pustaka.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { judul: 'Buku Updated' },
+      });
+      expect(result.judul).toBe('Buku Updated');
+    });
+
+    it('should throw NotFoundException when item not found', async () => {
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.update(999, { judul: 'X' })).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── delete ───
+
+  describe('delete', () => {
+    it('should delete pustaka and return success message', async () => {
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue({ id: 1 });
+      (prisma.pustaka.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.delete(1);
+
+      expect(prisma.pustaka.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Item pustaka berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.pustaka.findUnique as jest.Mock).mockResolvedValue(null);
+      const { NotFoundException } = await import('@nestjs/common');
+
+      await expect(service.delete(999)).rejects.toThrow(NotFoundException);
+    });
+  });
 });

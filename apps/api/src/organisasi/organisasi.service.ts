@@ -77,6 +77,15 @@ export class OrganisasiService {
     });
   }
 
+  async findUnitLatihanById(id: number) {
+    const item = await this.prisma.unitLatihan.findUnique({
+      where: { id },
+      include: { distrik: true },
+    });
+    if (!item) throw new NotFoundException('UnitLatihan not found');
+    return item;
+  }
+
   // ─── Generic CRUD by ID ───
 
   async findNasionalById(id: number) {

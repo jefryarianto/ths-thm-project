@@ -1,14 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AnggotaService } from './anggota.service.js';
 import { Roles, RolesGuard } from '../auth/roles.guard.js';
+import { Public } from '../auth/public.decorator.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @ApiTags('Anggota')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('anggota')
 export class AnggotaController {
   constructor(
@@ -16,7 +17,7 @@ export class AnggotaController {
     private prisma: PrismaService,
   ) {}
 
-  // ─── ANGGOTA CRUD ───
+  // ─── ANGGOTA CRUD ────────────────────────────────────────────────────────────
 
   @Post()
   @Roles('superadmin', 'admin_distrik')
@@ -47,6 +48,8 @@ export class AnggotaController {
     return this.anggotaService.findAll(page, limit, search, status, rantingId ? +rantingId : undefined);
   }
 
+  // ─── Static routes MUST come before /:id ─────────────────────────────────────
+
   @Get('me')
   @ApiOperation({ summary: 'Get current logged-in user anggota profile' })
   async getMe(@Request() req: any) {
@@ -67,52 +70,12 @@ export class AnggotaController {
   }
 
   @Get('search-claim')
-  @ApiOperation({ summary: 'Search anggota for claim membership (public)' })
+  @ApiOperation({ summary: 'Search anggota for claim membership' })
   searchForClaim(@Query('q') q: string) {
     return this.anggotaService.findForClaim(q);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get anggota by ID with full relations' })
-  findById(@Param('id') id: string) {
-    return this.anggotaService.findById(+id);
-  }
-
-  @Get('uuid/:uuid')
-  @ApiOperation({ summary: 'Get anggota by UUID (public verification)' })
-  findByUuid(@Param('uuid') uuid: string) {
-    return this.anggotaService.findByUuid(uuid);
-  }
-
-  @Put(':id')
-  @Roles('superadmin', 'admin_distrik')
-  @ApiOperation({ summary: 'Update anggota data' })
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.anggotaService.update(+id, data);
-  }
-
-  @Delete(':id')
-  @Roles('superadmin')
-  @ApiOperation({ summary: 'Delete anggota' })
-  delete(@Param('id') id: string) {
-    return this.anggotaService.delete(+id);
-  }
-
-  @Post(':id/validate')
-  @Roles('superadmin', 'admin_distrik')
-  @ApiOperation({ summary: 'Validate anggota data completeness' })
-  validateData(@Param('id') id: string) {
-    return this.anggotaService.validateData(+id);
-  }
-
-  @Post(':id/validasi')
-  @Roles('superadmin', 'admin_distrik')
-  @ApiOperation({ summary: 'Set validasi status for anggota' })
-  setValidasi(@Param('id') id: string, @Body('status') status: string) {
-    return this.anggotaService.setValidasi(+id, status);
-  }
-
-  // ─── CALON ANGGOTA ───
+  // ─── CALON ANGGOTA ───────────────────────────────────────────────────────────
 
   @Post('calon')
   @Roles('superadmin', 'admin_distrik', 'admin_ranting')
@@ -192,58 +155,18 @@ export class AnggotaController {
     });
   }
 
-  // ─── ANGGOTA ROLE ───
-
-  @Post(':id/role')
+  @Post('calon/:id/konversi')
   @Roles('superadmin', 'admin_distrik')
-  @ApiOperation({ summary: 'Assign role to anggota (pelatih, penguji, wasit_juri)' })
-  assignRole(
-    @Param('id') id: string,
-    @Body() data: { roleCode: string; expiresAt?: string },
-  ) {
-    return this.prisma.anggotaRole.create({
-      data: {
-        anggotaId: +id,
-        roleCode: data.roleCode,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      },
-    });
-  }
-
-  @Get(':id/roles')
-  @ApiOperation({ summary: 'Get roles assigned to anggota' })
-  getRoles(@Param('id') id: string) {
-    return this.prisma.anggotaRole.findMany({
-      where: { anggotaId: +id },
-      orderBy: { issuedAt: 'desc' },
-    });
-  }
-
-  @Delete('role/:roleId')
-  @Roles('superadmin', 'admin_distrik')
-  @ApiOperation({ summary: 'Remove role from anggota' })
-  removeRole(@Param('roleId') roleId: string) {
-    return this.prisma.anggotaRole.delete({ where: { id: +roleId } });
-  }
-
-  // ─── ANGGOTA UPDATE REQUEST ───
-
-  @Post(':id/update-request')
-  @ApiOperation({ summary: 'Submit update request for anggota data' })
-  submitUpdateRequest(
+  @ApiOperation({ summary: 'Konversi calon anggota lulus menjadi anggota aktif. Buat record Anggota baru, assign role anggota, butuh nomorAnggota.' })
+  konversiCalon(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() data: { newData: Record<string, unknown>; oldData?: Record<string, unknown> },
+    @Body() data: { nomorAnggota: string; tingkat?: string },
   ) {
-    return this.prisma.anggotaUpdateRequest.create({
-      data: {
-        anggotaId: +id,
-        submittedBy: req.user.id,
-        oldData: (data.oldData || null) as any,
-        newData: data.newData as any,
-      },
-    });
+    return this.anggotaService.konversiCalonKeAnggota(+id, data, req.user.id);
   }
+
+  // ─── ANGGOTA UPDATE REQUEST ──────────────────────────────────────────────────
 
   @Get('update-requests')
   @Roles('superadmin', 'admin_distrik')
@@ -292,7 +215,6 @@ export class AnggotaController {
     };
 
     return this.prisma.$transaction(async (tx) => {
-      // If approved, apply the newData to the anggota record
       if (data.status === 'approved' && request.newData) {
         const newData = request.newData as Record<string, unknown>;
         await tx.anggota.update({
@@ -303,11 +225,175 @@ export class AnggotaController {
           },
         });
       }
-
       return tx.anggotaUpdateRequest.update({
         where: { id: +id },
         data: reviewData,
       });
     });
+  }
+
+  // ─── PENDAFTARAN ANGGOTA (Self-Registration) ─────────────────────────────────
+
+  /**
+   * POST /anggota/pendaftaran — publik, tidak perlu JWT
+   * Endpoint ini dikecualikan dari guard di level route dengan skipJwt flag,
+   * tapi karena @UseGuards ada di class level, kita buat endpoint tetap
+   * menerima request tanpa token menggunakan opsional guard di service.
+   * Untuk benar-benar public, perlu deklarasi di module terpisah.
+   * Saat ini endpoint ini mengizinkan semua role (termasuk guest yang tidak login).
+   */
+  @Post('pendaftaran')
+  @Public()
+  @ApiOperation({ summary: 'Daftar sebagai anggota baru (tidak perlu login). noHp wajib diisi.' })
+  createPendaftaran(
+    @Body() data: {
+      namaLengkap: string;
+      jenisKelamin: string;
+      noHp: string;
+      rantingId?: number;
+      tempatLahir?: string;
+      tanggalLahir?: string;
+      email?: string;
+      alamat?: string;
+    },
+  ) {
+    return this.anggotaService.createPendaftaran(data);
+  }
+
+  @Get('pendaftaran')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Get semua pendaftaran anggota (admin). Filter: status, rantingId' })
+  findAllPendaftaran(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('rantingId') rantingId?: string,
+  ) {
+    return this.anggotaService.findAllPendaftaran(
+      page ? +page : undefined,
+      limit ? +limit : undefined,
+      status,
+      rantingId ? +rantingId : undefined,
+    );
+  }
+
+  @Get('pendaftaran/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Get detail pendaftaran by ID' })
+  findPendaftaranById(@Param('id') id: string) {
+    return this.anggotaService.findPendaftaranById(+id);
+  }
+
+  @Put('pendaftaran/:id/review')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Setujui atau tolak pendaftaran. Jika approved, record anggota dibuat otomatis dan butuh nomorAnggota.' })
+  reviewPendaftaran(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() data: {
+      status: 'approved' | 'rejected';
+      catatanAdmin?: string;
+      nomorAnggota?: string;
+    },
+  ) {
+    return this.anggotaService.reviewPendaftaran(+id, req.user.id, data);
+  }
+
+  @Delete('pendaftaran/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Hapus pendaftaran yang masih berstatus pending' })
+  deletePendaftaran(@Param('id') id: string) {
+    return this.anggotaService.deletePendaftaran(+id);
+  }
+
+  // ─── Dynamic routes (:id) MUST come after all static routes ──────────────────
+
+  @Get('uuid/:uuid')
+  @ApiOperation({ summary: 'Get anggota by UUID (public verification)' })
+  findByUuid(@Param('uuid') uuid: string) {
+    return this.anggotaService.findByUuid(uuid);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get anggota by ID with full relations' })
+  findById(@Param('id') id: string) {
+    return this.anggotaService.findById(+id);
+  }
+
+  @Put(':id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Update anggota data' })
+  update(@Param('id') id: string, @Body() data: any) {
+    return this.anggotaService.update(+id, data);
+  }
+
+  @Delete(':id')
+  @Roles('superadmin')
+  @ApiOperation({ summary: 'Delete anggota' })
+  delete(@Param('id') id: string) {
+    return this.anggotaService.delete(+id);
+  }
+
+  @Post(':id/validate')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Validate anggota data completeness' })
+  validateData(@Param('id') id: string) {
+    return this.anggotaService.validateData(+id);
+  }
+
+  @Post(':id/validasi')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Set validasi status for anggota' })
+  setValidasi(@Param('id') id: string, @Body('status') status: string) {
+    return this.anggotaService.setValidasi(+id, status);
+  }
+
+  @Post(':id/update-request')
+  @ApiOperation({ summary: 'Submit update request for anggota data' })
+  submitUpdateRequest(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() data: { newData: Record<string, unknown>; oldData?: Record<string, unknown> },
+  ) {
+    return this.prisma.anggotaUpdateRequest.create({
+      data: {
+        anggotaId: +id,
+        submittedBy: req.user.id,
+        oldData: (data.oldData || null) as any,
+        newData: data.newData as any,
+      },
+    });
+  }
+
+  @Post(':id/role')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Assign role to anggota (pelatih, penguji, wasit_juri)' })
+  assignRole(
+    @Param('id') id: string,
+    @Body() data: { roleCode: string; expiresAt?: string },
+  ) {
+    return this.prisma.anggotaRole.create({
+      data: {
+        anggotaId: +id,
+        roleCode: data.roleCode,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      },
+    });
+  }
+
+  @Get(':id/roles')
+  @ApiOperation({ summary: 'Get roles assigned to anggota' })
+  getRoles(@Param('id') id: string) {
+    return this.prisma.anggotaRole.findMany({
+      where: { anggotaId: +id },
+      orderBy: { issuedAt: 'desc' },
+    });
+  }
+
+  @Delete('role/:roleId')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Remove role from anggota' })
+  removeRole(@Param('roleId') roleId: string) {
+    return this.prisma.anggotaRole.delete({ where: { id: +roleId } });
   }
 }

@@ -62,8 +62,9 @@ describe('PendadaranService', () => {
       ];
       (prisma.nilaiPendadaran.findMany as jest.Mock).mockResolvedValue(nilaiList);
       (prisma.hasilPendadaran.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.hasilPendadaran.upsert as jest.Mock).mockResolvedValue(mockHasil);
-
+      (prisma.hasilPendadaran.findMany as jest.Mock).mockResolvedValue([mockHasil]);
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue(mockHasil);
+      (prisma.hasilPendadaran.findUnique as jest.Mock).mockResolvedValue(mockHasil);
       const result = await service.hitungHasil(5, 10);
       expect(result).toEqual(mockHasil);
     });
@@ -83,6 +84,10 @@ describe('PendadaranService', () => {
       (prisma.hasilPendadaran.upsert as jest.Mock).mockResolvedValue({
         id: 2, kegiatanId: 5, calonAnggotaId: 10, totalSkor: 30, ranking: 1, statusKelulusan: 'gagal',
       });
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue({});
+      (prisma.hasilPendadaran.findUnique as jest.Mock).mockResolvedValue({
+        id: 2, kegiatanId: 5, calonAnggotaId: 10, totalSkor: 30, ranking: 1, statusKelulusan: 'gagal',
+      });
 
       const result = await service.hitungHasil(5, 10);
 
@@ -98,6 +103,10 @@ describe('PendadaranService', () => {
       (prisma.nilaiPendadaran.findMany as jest.Mock).mockResolvedValue(nilaiList);
       (prisma.hasilPendadaran.findMany as jest.Mock).mockResolvedValue([]);
       (prisma.hasilPendadaran.upsert as jest.Mock).mockResolvedValue({
+        id: 3, kegiatanId: 5, calonAnggotaId: 10, totalSkor: 0, ranking: 1, statusKelulusan: 'gagal',
+      });
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue({});
+      (prisma.hasilPendadaran.findUnique as jest.Mock).mockResolvedValue({
         id: 3, kegiatanId: 5, calonAnggotaId: 10, totalSkor: 0, ranking: 1, statusKelulusan: 'gagal',
       });
 
@@ -140,7 +149,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── createAspek ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ createAspek ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('createAspek', () => {
     it('should create aspek penilaian', async () => {
@@ -154,7 +163,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── createItem ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ createItem ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('createItem', () => {
     it('should create item penilaian', async () => {
@@ -168,7 +177,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── assignPenguji ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ assignPenguji ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('assignPenguji', () => {
     it('should assign penguji to kegiatan', async () => {
@@ -182,7 +191,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── getPengujiByKegiatan ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ getPengujiByKegiatan ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('getPengujiByKegiatan', () => {
     it('should return penguji for kegiatan', async () => {
@@ -199,7 +208,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── inputNilai ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ inputNilai ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('inputNilai', () => {
     it('should upsert nilai pendadaran', async () => {
@@ -224,7 +233,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── inputNilaiBulk ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ inputNilaiBulk ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('inputNilaiBulk', () => {
     it('should input multiple nilai and return results', async () => {
@@ -243,7 +252,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── validasiHasil ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ validasiHasil ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('validasiHasil', () => {
     it('should validate hasil pendadaran', async () => {
@@ -257,12 +266,210 @@ describe('PendadaranService', () => {
       expect(prisma.hasilPendadaran.update).toHaveBeenCalledWith({
         where: { kegiatanId_calonAnggotaId: { kegiatanId: 5, calonAnggotaId: 10 } },
         data: { statusValidasi: 'lulus', divalidasiOleh: 2, divalidasiAt: expect.any(Date) },
+        include: {
+          calonAnggota: { select: { id: true, namaLengkap: true } },
+          kegiatan: { select: { id: true, nama: true } },
+        },
       });
       expect(result.statusValidasi).toBe('lulus');
     });
   });
 
-  // ─── findByCalon ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ findAspekById ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('findAspekById', () => {
+    it('should return aspek by id with items', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(mockAspekList[0]);
+
+      const result = await service.findAspekById(1);
+
+      expect(prisma.aspekPenilaian.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: { itemPenilaian: { orderBy: { urutan: 'asc' } } },
+      });
+      expect(result).toEqual(mockAspekList[0]);
+    });
+
+    it('should throw NotFoundException when aspek not found', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findAspekById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ updateAspek ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('updateAspek', () => {
+    it('should update aspek fields', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(mockAspekList[0]);
+      (prisma.aspekPenilaian.update as jest.Mock).mockResolvedValue({ ...mockAspekList[0], namaAspek: 'Updated' });
+
+      const result = await service.updateAspek(1, { namaAspek: 'Updated' });
+
+      expect(prisma.aspekPenilaian.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { namaAspek: 'Updated' },
+      });
+      expect(result.namaAspek).toBe('Updated');
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateAspek(999, {})).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ deleteAspek ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('deleteAspek', () => {
+    it('should delete aspek and return success message', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(mockAspekList[0]);
+      (prisma.aspekPenilaian.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deleteAspek(1);
+
+      expect(prisma.aspekPenilaian.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Aspek berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.aspekPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteAspek(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ findItemById ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('findItemById', () => {
+    it('should return item by id with aspek', async () => {
+      const item = { id: 1, namaItem: 'Kehadiran', aspek: mockAspekList[0] };
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue(item);
+
+      const result = await service.findItemById(1);
+
+      expect(prisma.itemPenilaian.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: { aspek: true },
+      });
+      expect(result).toEqual(item);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findItemById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ updateItem ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('updateItem', () => {
+    it('should update item fields', async () => {
+      const item = { id: 1, namaItem: 'Kehadiran', bobot: 1 };
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue(item);
+      (prisma.itemPenilaian.update as jest.Mock).mockResolvedValue({ ...item, bobot: 2 });
+
+      const result = await service.updateItem(1, { bobot: 2 });
+
+      expect(prisma.itemPenilaian.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { bobot: 2 },
+      });
+      expect(result.bobot).toBe(2);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateItem(999, {})).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ deleteItem ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('deleteItem', () => {
+    it('should delete item and return success message', async () => {
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue({ id: 1 });
+      (prisma.itemPenilaian.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deleteItem(1);
+
+      expect(prisma.itemPenilaian.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Item berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.itemPenilaian.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteItem(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ deletePenguji ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('deletePenguji', () => {
+    it('should delete penguji kegiatan', async () => {
+      (prisma.pengujiKegiatan.findUnique as jest.Mock).mockResolvedValue({ id: 1, kegiatanId: 5 });
+      (prisma.pengujiKegiatan.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deletePenguji(1);
+
+      expect(prisma.pengujiKegiatan.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Penguji berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.pengujiKegiatan.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deletePenguji(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ validasiHasil ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â auto update calon status ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
+
+  describe('validasiHasil ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â status calon propagation', () => {
+    it('should update calonAnggota status to lulus when approved and lulus', async () => {
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue({
+        ...mockHasil, statusValidasi: 'approved', statusKelulusan: 'lulus',
+      });
+      (prisma.calonAnggota.update as jest.Mock).mockResolvedValue({});
+
+      await service.validasiHasil(5, 10, 2, 'approved');
+
+      expect(prisma.calonAnggota.update).toHaveBeenCalledWith({
+        where: { id: 10 },
+        data: { status: 'lulus' },
+      });
+    });
+
+    it('should update calonAnggota status to gagal when approved and gagal', async () => {
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue({
+        ...mockHasil, statusValidasi: 'approved', statusKelulusan: 'gagal',
+      });
+      (prisma.calonAnggota.update as jest.Mock).mockResolvedValue({});
+
+      await service.validasiHasil(5, 10, 2, 'approved');
+
+      expect(prisma.calonAnggota.update).toHaveBeenCalledWith({
+        where: { id: 10 },
+        data: { status: 'gagal' },
+      });
+    });
+
+    it('should NOT update calonAnggota when status is rejected', async () => {
+      (prisma.hasilPendadaran.update as jest.Mock).mockResolvedValue({
+        ...mockHasil, statusValidasi: 'rejected',
+      });
+
+      await service.validasiHasil(5, 10, 2, 'rejected');
+
+      expect(prisma.calonAnggota.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ findByCalon Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   describe('findByCalon', () => {
     it('should return hasil by calon anggota', async () => {
@@ -282,7 +489,7 @@ describe('PendadaranService', () => {
     });
   });
 
-  // ─── getNilaiDetail ───
+  // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ getNilaiDetail ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
   describe('getNilaiDetail', () => {
     it('should return nilai detail with aspek and penguji', async () => {

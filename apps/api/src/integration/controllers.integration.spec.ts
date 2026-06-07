@@ -57,6 +57,7 @@ function createOrganisasiMock() {
     deleteRanting: jest.fn().mockResolvedValue({ id: 1 }),
     createUnitLatihan: jest.fn().mockResolvedValue({ id: 1, nama: 'Unit Latihan Test' }),
     findAllUnitLatihan: jest.fn().mockResolvedValue([]),
+    findUnitLatihanById: jest.fn().mockResolvedValue({ id: 1, nama: 'Unit Latihan Test' }),
     getHierarchyTree: jest.fn().mockResolvedValue({}),
   };
 }
@@ -1041,10 +1042,10 @@ describe('Controllers (integration) — decorator branches', () => {
       const res = await request(app.getHttpServer()).get('/iuran/dashboard/monthly').set('Authorization', 'Bearer t');
       expect(res.status).toBe(200);
     });
-    it('POST /iuran — unauthorized role (403)', async () => {
+    it('POST /iuran — anggota role now allowed (201)', async () => {
       mockUserRole = 'anggota';
       const res = await request(app.getHttpServer()).post('/iuran').set('Authorization', 'Bearer t').send({ jenisIuranId: 1, anggotaId: 1, jumlahBayar: 50000, tanggalBayar: '2026-06-01' });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(201);
     });
   });
 

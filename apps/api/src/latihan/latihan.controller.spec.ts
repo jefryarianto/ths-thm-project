@@ -11,6 +11,14 @@ describe('LatihanController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
+      addCatatan: jest.fn(),
+      getCatatanByLatihan: jest.fn(),
+      updateCatatan: jest.fn(),
+      deleteCatatan: jest.fn(),
+      addDokumentasi: jest.fn(),
+      getDokumentasiByLatihan: jest.fn(),
+      reorderDokumentasi: jest.fn(),
+      deleteDokumentasi: jest.fn(),
     } as any;
 
     const module = await Test.createTestingModule({
@@ -76,6 +84,89 @@ describe('LatihanController', () => {
 
       expect(latihanService.findById).toHaveBeenCalledWith(5);
       expect(result).toEqual({ id: 5, jenisMateri: 'Teknik Dasar' });
+    });
+  });
+
+  // ─── catatan ───
+
+  describe('addCatatan', () => {
+    it('should call service.addCatatan with latihanId, data, and userId', async () => {
+      const req = { user: { id: 3 } };
+      const data = { anggotaId: 2, catatanKhusus: 'Perlu perbaikan' };
+      latihanService.addCatatan.mockResolvedValue({ id: 1, ...data } as any);
+
+      const result = await controller.addCatatan('1', req, data);
+
+      expect(latihanService.addCatatan).toHaveBeenCalledWith(1, data, 3);
+      expect(result).toEqual({ id: 1, ...data });
+    });
+  });
+
+  describe('getCatatan', () => {
+    it('should call service.getCatatanByLatihan with latihanId', async () => {
+      latihanService.getCatatanByLatihan.mockResolvedValue([{ id: 1 }] as any);
+
+      const result = await controller.getCatatan('1');
+
+      expect(latihanService.getCatatanByLatihan).toHaveBeenCalledWith(1);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('updateCatatan', () => {
+    it('should call service.updateCatatan with catatanId and data', async () => {
+      latihanService.updateCatatan.mockResolvedValue({ id: 1, catatanKhusus: 'Updated' } as any);
+
+      const result = await controller.updateCatatan('1', { catatanKhusus: 'Updated' });
+
+      expect(latihanService.updateCatatan).toHaveBeenCalledWith(1, { catatanKhusus: 'Updated' });
+      expect(result).toEqual({ id: 1, catatanKhusus: 'Updated' });
+    });
+  });
+
+  describe('deleteCatatan', () => {
+    it('should call service.deleteCatatan with catatanId', async () => {
+      latihanService.deleteCatatan.mockResolvedValue({ message: 'Catatan berhasil dihapus' } as any);
+
+      const result = await controller.deleteCatatan('1');
+
+      expect(latihanService.deleteCatatan).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ message: 'Catatan berhasil dihapus' });
+    });
+  });
+
+  // ─── dokumentasi ───
+
+  describe('getDokumentasi', () => {
+    it('should call service.getDokumentasiByLatihan with latihanId', async () => {
+      latihanService.getDokumentasiByLatihan.mockResolvedValue([{ id: 1, fileUrl: 'https://...' }] as any);
+
+      const result = await controller.getDokumentasi('1');
+
+      expect(latihanService.getDokumentasiByLatihan).toHaveBeenCalledWith(1);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('reorderDokumentasi', () => {
+    it('should call service.reorderDokumentasi with id and orders', async () => {
+      const orders = [{ id: 1, urutan: 2 }, { id: 2, urutan: 1 }];
+      latihanService.reorderDokumentasi.mockResolvedValue([] as any);
+
+      await controller.reorderDokumentasi('1', { orders });
+
+      expect(latihanService.reorderDokumentasi).toHaveBeenCalledWith(1, orders);
+    });
+  });
+
+  describe('deleteDokumentasi', () => {
+    it('should call service.deleteDokumentasi with dokumentasiId', async () => {
+      latihanService.deleteDokumentasi.mockResolvedValue({ message: 'Dokumentasi berhasil dihapus' } as any);
+
+      const result = await controller.deleteDokumentasi('5');
+
+      expect(latihanService.deleteDokumentasi).toHaveBeenCalledWith(5);
+      expect(result).toEqual({ message: 'Dokumentasi berhasil dihapus' });
     });
   });
 });

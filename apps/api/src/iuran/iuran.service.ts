@@ -24,6 +24,25 @@ export class IuranService {
     return this.prisma.jenisIuran.findMany({ where, orderBy: { nama: 'asc' } });
   }
 
+  async findJenisById(id: number) {
+    const jenis = await this.prisma.jenisIuran.findUnique({ where: { id } });
+    if (!jenis) throw new NotFoundException('Jenis iuran not found');
+    return jenis;
+  }
+
+  async updateJenis(id: number, data: { nama?: string; deskripsi?: string; nominal?: number; periode?: string; isActive?: boolean }) {
+    const jenis = await this.prisma.jenisIuran.findUnique({ where: { id } });
+    if (!jenis) throw new NotFoundException('Jenis iuran not found');
+    return this.prisma.jenisIuran.update({ where: { id }, data });
+  }
+
+  async deleteJenis(id: number) {
+    const jenis = await this.prisma.jenisIuran.findUnique({ where: { id } });
+    if (!jenis) throw new NotFoundException('Jenis iuran not found');
+    await this.prisma.jenisIuran.delete({ where: { id } });
+    return { message: 'Jenis iuran berhasil dihapus' };
+  }
+
   // ─── Pembayaran Iuran ───
   async createPembayaran(data: {
     jenisIuranId: number;
@@ -87,6 +106,35 @@ export class IuranService {
       where: { id },
       data: { status, verifiedBy: adminId, verifiedAt: new Date() },
     });
+  }
+
+  async findPembayaranById(id: number) {
+    const bayar = await this.prisma.pembayaranIuran.findUnique({
+      where: { id },
+      include: {
+        jenisIuran: { select: { id: true, nama: true, nominal: true, periode: true } },
+        anggota: { select: { id: true, namaLengkap: true, nomorAnggota: true } },
+        verifikator: { select: { id: true, name: true } },
+      },
+    });
+    if (!bayar) throw new NotFoundException('Pembayaran not found');
+    return bayar;
+  }
+
+  async updatePembayaran(id: number, data: { jumlahBayar?: number; tanggalBayar?: string; metodeBayar?: string; buktiBayarPath?: string }) {
+    const bayar = await this.prisma.pembayaranIuran.findUnique({ where: { id } });
+    if (!bayar) throw new NotFoundException('Pembayaran not found');
+    return this.prisma.pembayaranIuran.update({
+      where: { id },
+      data: { ...data, ...(data.tanggalBayar ? { tanggalBayar: new Date(data.tanggalBayar) } : {}) },
+    });
+  }
+
+  async deletePembayaran(id: number) {
+    const bayar = await this.prisma.pembayaranIuran.findUnique({ where: { id } });
+    if (!bayar) throw new NotFoundException('Pembayaran not found');
+    await this.prisma.pembayaranIuran.delete({ where: { id } });
+    return { message: 'Pembayaran berhasil dihapus' };
   }
 
   async getStatusAnggota(anggotaId: number) {

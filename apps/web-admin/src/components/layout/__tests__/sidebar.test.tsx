@@ -60,7 +60,7 @@ describe("Sidebar", () => {
 
   it("renders brand logo and name", () => {
     render(<Sidebar />);
-    expect(screen.getByText("TH")).toBeInTheDocument();
+    expect(screen.getByAltText("THS-THM")).toBeInTheDocument();
     expect(screen.getByText("THS THM Admin")).toBeInTheDocument();
   });
 

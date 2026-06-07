@@ -10,6 +10,9 @@ describe('PustakaController', () => {
     pustakaService = {
       create: jest.fn(),
       findAll: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     } as any;
 
     const module = await Test.createTestingModule({
@@ -56,6 +59,50 @@ describe('PustakaController', () => {
       await controller.findAll(undefined, undefined, undefined);
 
       expect(pustakaService.findAll).toHaveBeenCalledWith(undefined, undefined, undefined, true);
+    });
+  });
+
+  describe('findAllAdmin', () => {
+    it('should call pustakaService.findAll without isPublic filter', async () => {
+      pustakaService.findAll.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } });
+
+      await controller.findAllAdmin(1, 10, 'Buku');
+
+      expect(pustakaService.findAll).toHaveBeenCalledWith(1, 10, 'Buku');
+    });
+  });
+
+  describe('findById', () => {
+    it('should call pustakaService.findById with parsed id', async () => {
+      pustakaService.findById.mockResolvedValue({ id: 3, judul: 'Buku C' } as any);
+
+      const result = await controller.findById('3');
+
+      expect(pustakaService.findById).toHaveBeenCalledWith(3);
+      expect(result).toEqual({ id: 3, judul: 'Buku C' });
+    });
+  });
+
+  describe('update', () => {
+    it('should call pustakaService.update with id and data', async () => {
+      const data = { judul: 'Buku Updated', isPublic: false };
+      pustakaService.update.mockResolvedValue({ id: 1, ...data } as any);
+
+      const result = await controller.update('1', data);
+
+      expect(pustakaService.update).toHaveBeenCalledWith(1, data);
+      expect(result).toEqual({ id: 1, ...data });
+    });
+  });
+
+  describe('delete', () => {
+    it('should call pustakaService.delete with parsed id', async () => {
+      pustakaService.delete.mockResolvedValue({ message: 'Item pustaka berhasil dihapus' } as any);
+
+      const result = await controller.delete('1');
+
+      expect(pustakaService.delete).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ message: 'Item pustaka berhasil dihapus' });
     });
   });
 });

@@ -161,6 +161,26 @@ export class OrganisasiController {
     return this.organisasiService.findAllUnitLatihan(distrikId ? +distrikId : undefined);
   }
 
+  @Get('unit-latihan/:id')
+  @ApiOperation({ summary: 'Get unit latihan by ID' })
+  findUnitLatihanById(@Param('id') id: string) {
+    return this.organisasiService.findUnitLatihanById(+id);
+  }
+
+  @Put('unit-latihan/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Update unit latihan' })
+  updateUnitLatihan(@Param('id') id: string, @Body() data: any) {
+    return this.organisasiService.update('unitLatihan', +id, data);
+  }
+
+  @Delete('unit-latihan/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Delete unit latihan' })
+  deleteUnitLatihan(@Param('id') id: string) {
+    return this.organisasiService.delete('unitLatihan', +id);
+  }
+
   // ─── Hierarchy ───
   @Get('hierarchy')
   @ApiOperation({ summary: 'Get full organization hierarchy tree' })

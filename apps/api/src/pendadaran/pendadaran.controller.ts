@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { PendadaranService } from './pendadaran.service.js';
@@ -27,6 +27,29 @@ export class PendadaranController {
     return this.pendadaranService.createAspek(data);
   }
 
+  @Get('aspek/:id')
+  @ApiOperation({ summary: 'Get aspek penilaian by ID with items' })
+  findAspekById(@Param('id') id: string) {
+    return this.pendadaranService.findAspekById(+id);
+  }
+
+  @Put('aspek/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Update aspek penilaian' })
+  updateAspek(
+    @Param('id') id: string,
+    @Body() data: { kodeAspek?: string; namaAspek?: string; deskripsi?: string; bobot?: number; isActive?: boolean },
+  ) {
+    return this.pendadaranService.updateAspek(+id, data);
+  }
+
+  @Delete('aspek/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Delete aspek penilaian' })
+  deleteAspek(@Param('id') id: string) {
+    return this.pendadaranService.deleteAspek(+id);
+  }
+
   @Post('item')
   @Roles('superadmin', 'admin_distrik')
   @ApiOperation({ summary: 'Create new item penilaian under aspek' })
@@ -35,6 +58,29 @@ export class PendadaranController {
     skorMaksimal: number; bobot: number; urutan: number;
   }) {
     return this.pendadaranService.createItem(data);
+  }
+
+  @Get('item/:id')
+  @ApiOperation({ summary: 'Get item penilaian by ID' })
+  findItemById(@Param('id') id: string) {
+    return this.pendadaranService.findItemById(+id);
+  }
+
+  @Put('item/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Update item penilaian' })
+  updateItem(
+    @Param('id') id: string,
+    @Body() data: { kodeItem?: string; namaItem?: string; skorMaksimal?: number; bobot?: number; urutan?: number; isActive?: boolean },
+  ) {
+    return this.pendadaranService.updateItem(+id, data);
+  }
+
+  @Delete('item/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Delete item penilaian' })
+  deleteItem(@Param('id') id: string) {
+    return this.pendadaranService.deleteItem(+id);
   }
 
   // ─── Penguji ───
@@ -51,6 +97,13 @@ export class PendadaranController {
   @ApiOperation({ summary: 'Get penguji by kegiatan' })
   getPenguji(@Param('kegiatanId') kegiatanId: string) {
     return this.pendadaranService.getPengujiByKegiatan(+kegiatanId);
+  }
+
+  @Delete('penguji/:id')
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
+  @ApiOperation({ summary: 'Remove penguji from kegiatan' })
+  deletePenguji(@Param('id') id: string) {
+    return this.pendadaranService.deletePenguji(+id);
   }
 
   // ─── Nilai ───

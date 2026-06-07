@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { IuranService } from './iuran.service.js';
@@ -28,9 +28,29 @@ export class IuranController {
     return this.iuranService.findAllJenis(scopeType, scopeId ? +scopeId : undefined);
   }
 
+  @Get('jenis/:id')
+  @ApiOperation({ summary: 'Get iuran type by ID' })
+  findJenisById(@Param('id') id: string) {
+    return this.iuranService.findJenisById(+id);
+  }
+
+  @Put('jenis/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Update iuran type' })
+  updateJenis(@Param('id') id: string, @Body() data: { nama?: string; deskripsi?: string; nominal?: number; periode?: string; isActive?: boolean }) {
+    return this.iuranService.updateJenis(+id, data);
+  }
+
+  @Delete('jenis/:id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Delete iuran type' })
+  deleteJenis(@Param('id') id: string) {
+    return this.iuranService.deleteJenis(+id);
+  }
+
   // ─── Pembayaran ───
   @Post()
-  @Roles('superadmin', 'admin_distrik', 'pengurus_ranting')
+  @Roles('superadmin', 'admin_distrik', 'admin_ranting', 'anggota')
   @ApiOperation({ summary: 'Record a dues payment (creates pembayaran with pending status)' })
   createPembayaran(@Body() data: {
     jenisIuranId: number; anggotaId: number; jumlahBayar: number;
@@ -53,6 +73,26 @@ export class IuranController {
       jenisIuranId ? +jenisIuranId : undefined,
       status,
     );
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get pembayaran by ID' })
+  findPembayaranById(@Param('id') id: string) {
+    return this.iuranService.findPembayaranById(+id);
+  }
+
+  @Put(':id')
+  @Roles('superadmin', 'admin_distrik', 'admin_ranting', 'anggota')
+  @ApiOperation({ summary: 'Update pembayaran details' })
+  updatePembayaran(@Param('id') id: string, @Body() data: { jumlahBayar?: number; tanggalBayar?: string; metodeBayar?: string; buktiBayarPath?: string }) {
+    return this.iuranService.updatePembayaran(+id, data);
+  }
+
+  @Delete(':id')
+  @Roles('superadmin', 'admin_distrik')
+  @ApiOperation({ summary: 'Delete pembayaran' })
+  deletePembayaran(@Param('id') id: string) {
+    return this.iuranService.deletePembayaran(+id);
   }
 
   @Put(':id/verify')

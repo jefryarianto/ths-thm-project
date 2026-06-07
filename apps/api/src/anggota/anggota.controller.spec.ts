@@ -21,6 +21,12 @@ describe('AnggotaController', () => {
       delete: jest.fn(),
       validateData: jest.fn(),
       setValidasi: jest.fn(),
+      createPendaftaran: jest.fn(),
+      findAllPendaftaran: jest.fn(),
+      findPendaftaranById: jest.fn(),
+      reviewPendaftaran: jest.fn(),
+      deletePendaftaran: jest.fn(),
+      konversiCalonKeAnggota: jest.fn(),
     } as any;
 
     prisma = createPrismaMock();
@@ -457,6 +463,88 @@ describe('AnggotaController', () => {
 
       expect(prisma.anggotaRole.delete).toHaveBeenCalledWith({ where: { id: 1 } });
       expect(result).toEqual(mockDeleted);
+    });
+  });
+
+  // ─── konversiCalon ───
+
+  describe('konversiCalon', () => {
+    it('should call konversiCalonKeAnggota with parsed id and data', async () => {
+      const req = { user: { id: 1 } };
+      const data = { nomorAnggota: 'THS-2026-010', tingkat: 'Tamtama' };
+      const mockResult = {
+        anggota: { id: 10, nomorAnggota: 'THS-2026-010' },
+        message: 'Calon anggota berhasil dikonversi menjadi anggota aktif dengan nomor THS-2026-010',
+      };
+      anggotaService.konversiCalonKeAnggota.mockResolvedValue(mockResult as any);
+
+      const result = await controller.konversiCalon('5', req, data);
+
+      expect(anggotaService.konversiCalonKeAnggota).toHaveBeenCalledWith(5, data, 1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  // ─── pendaftaran ───
+
+  describe('createPendaftaran', () => {
+    it('should call service.createPendaftaran with body data (no auth needed)', async () => {
+      const data = {
+        namaLengkap: 'Budi', jenisKelamin: 'L',
+        noHp: '081234567890', rantingId: 1,
+      };
+      const mockResult = { id: 1, ...data, status: 'pending' };
+      anggotaService.createPendaftaran.mockResolvedValue(mockResult as any);
+
+      const result = await controller.createPendaftaran(data as any);
+
+      expect(anggotaService.createPendaftaran).toHaveBeenCalledWith(data);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('findAllPendaftaran', () => {
+    it('should call service.findAllPendaftaran with parsed query params', async () => {
+      const mockResult = { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+      anggotaService.findAllPendaftaran.mockResolvedValue(mockResult as any);
+
+      await controller.findAllPendaftaran('2', '20', 'pending', '3');
+
+      expect(anggotaService.findAllPendaftaran).toHaveBeenCalledWith(2, 20, 'pending', 3);
+    });
+
+    it('should pass undefined when query params not provided', async () => {
+      const mockResult = { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+      anggotaService.findAllPendaftaran.mockResolvedValue(mockResult as any);
+
+      await controller.findAllPendaftaran(undefined, undefined, undefined, undefined);
+
+      expect(anggotaService.findAllPendaftaran).toHaveBeenCalledWith(undefined, undefined, undefined, undefined);
+    });
+  });
+
+  describe('reviewPendaftaran', () => {
+    it('should call service.reviewPendaftaran with correct args', async () => {
+      const req = { user: { id: 1 } };
+      const data = { status: 'approved' as const, nomorAnggota: 'THS-001', catatanAdmin: 'OK' };
+      const mockResult = { id: 1, status: 'approved' };
+      anggotaService.reviewPendaftaran.mockResolvedValue(mockResult as any);
+
+      const result = await controller.reviewPendaftaran('1', req, data);
+
+      expect(anggotaService.reviewPendaftaran).toHaveBeenCalledWith(1, 1, data);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('deletePendaftaran', () => {
+    it('should call service.deletePendaftaran with parsed id', async () => {
+      anggotaService.deletePendaftaran.mockResolvedValue({ message: 'Pendaftaran berhasil dihapus' } as any);
+
+      const result = await controller.deletePendaftaran('1');
+
+      expect(anggotaService.deletePendaftaran).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ message: 'Pendaftaran berhasil dihapus' });
     });
   });
 

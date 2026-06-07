@@ -363,8 +363,310 @@ describe('DokumenService', () => {
   });
 
   // ──────────────────────────────────────────────
-  //  renderHtmlToPdf (private - tested indirectly)
+  //  Document Types CRUD
   // ──────────────────────────────────────────────
+
+  describe('createDocumentType', () => {
+    it('should create a document type', async () => {
+      const data = { code: 'SURAT_KETERANGAN', name: 'Surat Keterangan', category: 'surat' };
+      (prisma.documentType.create as jest.Mock).mockResolvedValue({ id: 4, ...data, isActive: true });
+
+      const result = await service.createDocumentType(data);
+
+      expect(prisma.documentType.create).toHaveBeenCalledWith({ data });
+      expect(result.code).toBe('SURAT_KETERANGAN');
+    });
+  });
+
+  describe('findAllDocumentTypes', () => {
+    it('should return all document types with counts', async () => {
+      const types = [
+        { id: 1, code: 'KARTU_ANGGOTA', _count: { documentTemplates: 2, issuedDocuments: 10 } },
+      ];
+      (prisma.documentType.findMany as jest.Mock).mockResolvedValue(types);
+
+      const result = await service.findAllDocumentTypes();
+
+      expect(prisma.documentType.findMany).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'asc' },
+        include: { _count: { select: { documentTemplates: true, issuedDocuments: true } } },
+      });
+      expect(result).toEqual(types);
+    });
+  });
+
+  describe('findDocumentTypeById', () => {
+    it('should return document type with templates, signers, stamps', async () => {
+      const type = { id: 1, code: 'KARTU_ANGGOTA', documentTemplates: [], documentSigners: [], documentStamps: [] };
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue(type);
+
+      const result = await service.findDocumentTypeById(1);
+
+      expect(prisma.documentType.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: {
+          documentTemplates: { where: { isActive: true } },
+          documentSigners: { where: { isActive: true } },
+          documentStamps: { where: { isActive: true } },
+        },
+      });
+      expect(result).toEqual(type);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findDocumentTypeById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateDocumentType', () => {
+    it('should update document type', async () => {
+      const type = { id: 1, code: 'KARTU_ANGGOTA', isActive: true };
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue(type);
+      (prisma.documentType.update as jest.Mock).mockResolvedValue({ ...type, isActive: false });
+
+      const result = await service.updateDocumentType(1, { isActive: false });
+
+      expect(prisma.documentType.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { isActive: false } });
+      expect(result.isActive).toBe(false);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateDocumentType(999, {})).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteDocumentType', () => {
+    it('should soft-delete document type by setting isActive=false', async () => {
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue({ id: 1, isActive: true });
+      (prisma.documentType.update as jest.Mock).mockResolvedValue({ id: 1, isActive: false });
+
+      const result = await service.deleteDocumentType(1);
+
+      expect(prisma.documentType.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { isActive: false } });
+      expect(result.isActive).toBe(false);
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentType.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteDocumentType(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  Document Templates CRUD
+  // ──────────────────────────────────────────────
+
+  describe('createDocumentTemplate', () => {
+    it('should upload file and create template record', async () => {
+      const file = { originalname: 'template.html', buffer: Buffer.from('<html>'), mimetype: 'text/html' } as Express.Multer.File;
+      const data = { documentTypeId: 1, name: 'Kartu Template v2' };
+      storage.uploadFile.mockResolvedValue('document-templates/1/123.html');
+      (prisma.documentTemplate.create as jest.Mock).mockResolvedValue({ id: 2, name: 'Kartu Template v2' });
+
+      const result = await service.createDocumentTemplate(file, data, 1);
+
+      expect(storage.uploadFile).toHaveBeenCalledWith(
+        expect.stringContaining('document-templates/1/'),
+        file.buffer,
+        'text/html',
+      );
+      expect(prisma.documentTemplate.create).toHaveBeenCalled();
+      expect(result.name).toBe('Kartu Template v2');
+    });
+  });
+
+  describe('findAllDocumentTemplates', () => {
+    it('should return all templates', async () => {
+      (prisma.documentTemplate.findMany as jest.Mock).mockResolvedValue([{ id: 1, name: 'Template A' }]);
+
+      const result = await service.findAllDocumentTemplates();
+
+      expect(prisma.documentTemplate.findMany).toHaveBeenCalledWith({
+        where: {},
+        orderBy: { createdAt: 'desc' },
+        include: { documentType: true, pembuat: { select: { id: true, name: true } } },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('should filter by documentTypeId', async () => {
+      (prisma.documentTemplate.findMany as jest.Mock).mockResolvedValue([]);
+
+      await service.findAllDocumentTemplates(1);
+
+      expect(prisma.documentTemplate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { documentTypeId: 1 } }),
+      );
+    });
+  });
+
+  describe('findDocumentTemplateById', () => {
+    it('should return template with signed file URL', async () => {
+      (prisma.documentTemplate.findUnique as jest.Mock).mockResolvedValue({
+        id: 1, templateFilePath: 'document-templates/1/file.html',
+        documentType: { id: 1 }, pembuat: { id: 1, name: 'Admin' },
+      });
+      storage.getFileUrl.mockResolvedValue('https://signed.url/file.html');
+
+      const result = await service.findDocumentTemplateById(1);
+
+      expect(storage.getFileUrl).toHaveBeenCalledWith('document-templates/1/file.html');
+      expect(result.fileUrl).toBe('https://signed.url/file.html');
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentTemplate.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findDocumentTemplateById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteDocumentTemplate', () => {
+    it('should delete file from storage and remove template record', async () => {
+      (prisma.documentTemplate.findUnique as jest.Mock).mockResolvedValue({
+        id: 1, templateFilePath: 'document-templates/1/file.html',
+      });
+      storage.deleteFile.mockResolvedValue(undefined);
+      (prisma.documentTemplate.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deleteDocumentTemplate(1);
+
+      expect(storage.deleteFile).toHaveBeenCalledWith('document-templates/1/file.html');
+      expect(prisma.documentTemplate.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({ message: 'Template berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentTemplate.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteDocumentTemplate(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  Document Signers CRUD
+  // ──────────────────────────────────────────────
+
+  describe('createDocumentSigner', () => {
+    it('should upload signature and create signer record', async () => {
+      const file = { originalname: 'ttd.png', buffer: Buffer.from('img'), mimetype: 'image/png' } as Express.Multer.File;
+      storage.uploadFile.mockResolvedValue('document-signers/123-ttd.png');
+      (prisma.documentSigner.create as jest.Mock).mockResolvedValue({ id: 1, name: 'Kepala Distrik' });
+
+      const result = await service.createDocumentSigner(file, { name: 'Kepala Distrik', position: 'Kepala' });
+
+      expect(storage.uploadFile).toHaveBeenCalledWith(
+        expect.stringContaining('document-signers/'),
+        file.buffer,
+        'image/png',
+      );
+      expect(result.name).toBe('Kepala Distrik');
+    });
+  });
+
+  describe('findAllDocumentSigners', () => {
+    it('should return signers with signed URLs', async () => {
+      (prisma.documentSigner.findMany as jest.Mock).mockResolvedValue([
+        { id: 1, name: 'Kepala', signatureFilePath: 'signers/1.png', documentType: null },
+      ]);
+      storage.getFileUrl.mockResolvedValue('https://signed.url/1.png');
+
+      const result = await service.findAllDocumentSigners();
+
+      expect(result[0].signatureUrl).toBe('https://signed.url/1.png');
+    });
+  });
+
+  describe('updateDocumentSigner', () => {
+    it('should update signer metadata', async () => {
+      (prisma.documentSigner.findUnique as jest.Mock).mockResolvedValue({ id: 1, name: 'Old Name' });
+      (prisma.documentSigner.update as jest.Mock).mockResolvedValue({ id: 1, name: 'New Name' });
+
+      const result = await service.updateDocumentSigner(1, { name: 'New Name' });
+
+      expect(prisma.documentSigner.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { name: 'New Name' } });
+      expect(result.name).toBe('New Name');
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentSigner.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateDocumentSigner(999, {})).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteDocumentSigner', () => {
+    it('should delete file and record', async () => {
+      (prisma.documentSigner.findUnique as jest.Mock).mockResolvedValue({ id: 1, signatureFilePath: 'signers/1.png' });
+      storage.deleteFile.mockResolvedValue(undefined);
+      (prisma.documentSigner.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deleteDocumentSigner(1);
+
+      expect(storage.deleteFile).toHaveBeenCalledWith('signers/1.png');
+      expect(result).toEqual({ message: 'Signer berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentSigner.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteDocumentSigner(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  Document Stamps CRUD
+  // ──────────────────────────────────────────────
+
+  describe('createDocumentStamp', () => {
+    it('should upload stamp image and create record', async () => {
+      const file = { originalname: 'cap.png', buffer: Buffer.from('img'), mimetype: 'image/png' } as Express.Multer.File;
+      storage.uploadFile.mockResolvedValue('document-stamps/123-cap.png');
+      (prisma.documentStamp.create as jest.Mock).mockResolvedValue({ id: 1, name: 'Cap Distrik' });
+
+      const result = await service.createDocumentStamp(file, { name: 'Cap Distrik' });
+
+      expect(storage.uploadFile).toHaveBeenCalled();
+      expect(result.name).toBe('Cap Distrik');
+    });
+  });
+
+  describe('findAllDocumentStamps', () => {
+    it('should return stamps with signed URLs', async () => {
+      (prisma.documentStamp.findMany as jest.Mock).mockResolvedValue([
+        { id: 1, name: 'Cap', stampFilePath: 'stamps/1.png', documentType: null },
+      ]);
+      storage.getFileUrl.mockResolvedValue('https://signed.url/cap.png');
+
+      const result = await service.findAllDocumentStamps();
+
+      expect(result[0].stampUrl).toBe('https://signed.url/cap.png');
+    });
+  });
+
+  describe('deleteDocumentStamp', () => {
+    it('should delete stamp file and record', async () => {
+      (prisma.documentStamp.findUnique as jest.Mock).mockResolvedValue({ id: 1, stampFilePath: 'stamps/1.png' });
+      storage.deleteFile.mockResolvedValue(undefined);
+      (prisma.documentStamp.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.deleteDocumentStamp(1);
+
+      expect(storage.deleteFile).toHaveBeenCalledWith('stamps/1.png');
+      expect(result).toEqual({ message: 'Stamp berhasil dihapus' });
+    });
+
+    it('should throw NotFoundException when not found', async () => {
+      (prisma.documentStamp.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteDocumentStamp(999)).rejects.toThrow(NotFoundException);
+    });
+  });
 
   describe('renderHtmlToPdf', () => {
     it('should return placeholder buffer when playwright fails', async () => {
