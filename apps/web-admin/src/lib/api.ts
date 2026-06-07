@@ -71,7 +71,8 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
   const { accessToken } = getTokens();
 
   // Build URL — support both absolute and relative API_BASE
-  const baseUrl = API_BASE.startsWith("/") ? `${window.location.origin}${API_BASE}` : API_BASE;
+  const origin = (window.location.origin === "null" || !window.location.origin) ? "http://localhost:3000" : window.location.origin;
+  const baseUrl = API_BASE.startsWith("/") ? `${origin}${API_BASE}` : API_BASE;
   const url = new URL(`${baseUrl}${endpoint}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

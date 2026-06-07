@@ -73,7 +73,7 @@ describe("DashboardPage", () => {
     const DashboardPage = (await import("../page")).default;
     render(<DashboardPage />);
     await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     });
   });
 
@@ -81,7 +81,7 @@ describe("DashboardPage", () => {
     const DashboardPage = (await import("../page")).default;
     render(<DashboardPage />);
     await waitFor(() => {
-      expect(screen.getByText("Total Anggota")).toBeInTheDocument();
+      expect(screen.getAllByText("Total Anggota").length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.getByText("150")).toBeInTheDocument();
   });

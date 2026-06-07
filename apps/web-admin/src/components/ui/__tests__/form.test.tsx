@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { FormProvider } from "react-hook-form";
 import { FormFieldWrapper, FormMessage } from "../form";
 
 describe("FormFieldWrapper", () => {
@@ -51,34 +52,63 @@ describe("FormFieldWrapper", () => {
 });
 
 describe("FormMessage", () => {
+  const mockFormContext = {
+    getFieldState: () => ({}),
+    formState: { errors: {} },
+  };
+
   it("renders children", () => {
-    render(<FormMessage>Error message</FormMessage>);
+    render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage>Error message</FormMessage>
+      </FormProvider>
+    );
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
   it("returns null when no children", () => {
-    const { container } = render(<FormMessage />);
+    const { container } = render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage />
+      </FormProvider>
+    );
     expect(container.firstChild).toBeNull();
   });
 
   it("returns null when children is empty string", () => {
-    const { container } = render(<FormMessage>{""}</FormMessage>);
+    const { container } = render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage>{""}</FormMessage>
+      </FormProvider>
+    );
     expect(container.firstChild).toBeNull();
   });
 
   it("applies destructive style", () => {
-    render(<FormMessage>Error</FormMessage>);
+    render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage>Error</FormMessage>
+      </FormProvider>
+    );
     expect(screen.getByText("Error")).toHaveClass("text-destructive");
   });
 
   it("applies custom className", () => {
-    render(<FormMessage className="custom-msg">Error</FormMessage>);
+    render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage className="custom-msg">Error</FormMessage>
+      </FormProvider>
+    );
     expect(screen.getByText("Error")).toHaveClass("custom-msg");
   });
 
   it("forwards ref", () => {
     const ref = { current: null };
-    render(<FormMessage ref={ref}>Error</FormMessage>);
+    render(
+      <FormProvider {...mockFormContext}>
+        <FormMessage ref={ref}>Error</FormMessage>
+      </FormProvider>
+    );
     expect(ref.current).toBeInstanceOf(HTMLParagraphElement);
   });
 });

@@ -4,6 +4,22 @@ import { ApiError, apiRequest, api, authApi, clearTokens, setTokens } from "../a
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
+  const mockOrigin = "http://localhost:3000";
+  let _href = "";
+  const mockLocation = {
+    get href() { return _href; },
+    set href(v: string) { _href = v; },
+    get origin() { return mockOrigin; },
+    protocol: "http:",
+    host: "localhost:3000",
+    pathname: "/",
+    search: "",
+    hash: "",
+    assign: vi.fn(),
+    replace: vi.fn(),
+    reload: vi.fn(),
+  };
+  Object.defineProperty(window, "location", { value: mockLocation, writable: true });
 });
 
 function mockFetchResponse(data: unknown, status = 200, ok = true) {
@@ -155,7 +171,7 @@ describe("apiRequest", () => {
     localStorage.setItem("refreshToken", "invalid-refresh");
 
     Object.defineProperty(window, "location", {
-      value: { href: "", origin: "", protocol: "http:", host: "", pathname: "", search: "", hash: "", assign: vi.fn(), replace: vi.fn(), reload: vi.fn() },
+      value: { href: "http://localhost", origin: "http://localhost", protocol: "http:", host: "localhost:3000", pathname: "/", search: "", hash: "", assign: vi.fn(), replace: vi.fn(), reload: vi.fn() },
       writable: true,
     });
 
