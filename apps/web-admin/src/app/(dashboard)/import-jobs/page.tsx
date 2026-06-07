@@ -368,7 +368,7 @@ export default function ImportJobsPage() {
         <Select
           value={filterType}
           onValueChange={(v) => {
-            setFilterType(v);
+            setFilterType(v ?? "all");
             setPage(1);
           }}
         >

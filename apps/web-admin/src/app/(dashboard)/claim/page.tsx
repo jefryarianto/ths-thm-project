@@ -256,7 +256,7 @@ export default function ClaimPage() {
         <Select
           value={statusFilter}
           onValueChange={(v) => {
-            setStatusFilter(v === "all" ? "" : v);
+            setStatusFilter(v === "all" ? "" : (v ?? ""));
             setPage(1);
           }}
         >
@@ -378,17 +378,17 @@ export default function ClaimPage() {
       <Dialog
         open={approveTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setApproveTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Setujui Klaim Keanggotaan</DialogTitle>
-            <DialogDescription>
-              Setujui klaim anggota{" "}
-              <strong>{approveTarget?.namaLengkap}</strong> dengan nomor{" "}
-              <strong>{approveTarget?.nomorAnggotaInput}</strong>?
-            </DialogDescription>
+      if (!open) setApproveTarget(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Setujui Klaim Keanggotaan</DialogTitle>
+              <DialogDescription>
+                Setujui klaim anggota{" "}
+                <strong>{approveTarget?.namaLengkap ?? ""}</strong> dengan nomor{" "}
+                <strong>{approveTarget?.nomorAnggotaInput ?? ""}</strong>?
+              </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -428,8 +428,8 @@ export default function ClaimPage() {
             <DialogTitle>Tolak Klaim Keanggotaan</DialogTitle>
             <DialogDescription>
               Tolak klaim anggota{" "}
-              <strong>{rejectTarget?.namaLengkap}</strong> dengan nomor{" "}
-              <strong>{rejectTarget?.nomorAnggotaInput}</strong>. Berikan
+                <strong>{rejectTarget?.namaLengkap ?? ""}</strong> dengan nomor{" "}
+                <strong>{rejectTarget?.nomorAnggotaInput ?? ""}</strong>. Berikan
               alasan penolakan.
             </DialogDescription>
           </DialogHeader>

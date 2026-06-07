@@ -77,6 +77,18 @@ export class OrganisasiService {
     });
   }
 
+  async update(model: string, id: number, data: any) {
+    const prismaModel = (this.prisma as any)[model];
+    if (!prismaModel) throw new NotFoundException(`Model ${model} not found`);
+    return prismaModel.update({ where: { id }, data });
+  }
+
+  async delete(model: string, id: number) {
+    const prismaModel = (this.prisma as any)[model];
+    if (!prismaModel) throw new NotFoundException(`Model ${model} not found`);
+    return prismaModel.delete({ where: { id } });
+  }
+
   async findUnitLatihanById(id: number) {
     const item = await this.prisma.unitLatihan.findUnique({
       where: { id },
