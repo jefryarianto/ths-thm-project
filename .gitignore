@@ -12,6 +12,10 @@ uploads/
 .DS_Store
 coverage/
 
+# Test artifacts
+test-results/
+playwright-report/
+
 # Firebase credentials
 **/google-services.json
 **/GoogleService-Info.plist
