@@ -65,7 +65,7 @@ jobs:
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql://ths_thm:ths_thm_secret@localhost:5432/ths_thm_db?schema=public
-        run: pnpm --filter @ths-thm/api exec prisma migrate dev --name ci
+        run: pnpm --filter @ths-thm/api exec prisma migrate deploy
 
       - name: Seed database
         env:
