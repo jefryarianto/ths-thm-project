@@ -59,7 +59,7 @@ describe("FormMessage", () => {
 
   it("renders children", () => {
     render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage>Error message</FormMessage>
       </FormProvider>
     );
@@ -68,7 +68,7 @@ describe("FormMessage", () => {
 
   it("returns null when no children", () => {
     const { container } = render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage />
       </FormProvider>
     );
@@ -77,7 +77,7 @@ describe("FormMessage", () => {
 
   it("returns null when children is empty string", () => {
     const { container } = render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage>{""}</FormMessage>
       </FormProvider>
     );
@@ -86,7 +86,7 @@ describe("FormMessage", () => {
 
   it("applies destructive style", () => {
     render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage>Error</FormMessage>
       </FormProvider>
     );
@@ -95,7 +95,7 @@ describe("FormMessage", () => {
 
   it("applies custom className", () => {
     render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage className="custom-msg">Error</FormMessage>
       </FormProvider>
     );
@@ -105,7 +105,7 @@ describe("FormMessage", () => {
   it("forwards ref", () => {
     const ref = { current: null };
     render(
-      <FormProvider {...mockFormContext}>
+      <FormProvider {...(mockFormContext as any)}>
         <FormMessage ref={ref}>Error</FormMessage>
       </FormProvider>
     );
