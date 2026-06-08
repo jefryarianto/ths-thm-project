@@ -1,6 +1,6 @@
-FROM node:22-alpine AS builder
-
-RUN npm i -g pnpm@10
+FROM node:22-bookworm-slim AS builder
+SHELL ["/bin/bash", "-lc"]
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
