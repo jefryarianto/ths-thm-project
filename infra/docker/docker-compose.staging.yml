@@ -1,38 +1,51 @@
-# Docker Compose staging override
+# Docker Compose staging override for Dokploy + Traefik
 # Usage:
 #   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.staging.yml up -d
-#   bash infra/docker/scripts/staging-init.sh    # first-time setup (migrate + seed)
-#
-# Build after dependency changes:
-#   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.staging.yml build
 
 services:
   api:
     ports:
-      - "4000:4000"
+      - "4000"
     environment:
       - NODE_ENV=staging
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-in-production}
       - API_PORT=4000
-      # Database — uses internal Docker network
       - DATABASE_URL=postgresql://ths_thm:ths_thm_secret@postgres:5432/ths_thm_db?schema=public
       - REDIS_URL=redis://valkey:6379
-      # MinIO — internal Docker network
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=ths-thm-docs
       - MINIO_USE_SSL=false
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-staging.rule=Host(`api-staging.ths-thm.cloud`)"
+      - "traefik.http.routers.api-staging.entrypoints=websecure"
+      - "traefik.http.routers.api-staging.tls=true"
+      - "traefik.http.routers.api-staging.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api-staging.loadbalancer.server.port=4000"
+    networks:
+      - ths-thm-network
+      - traefik-network
 
   web-admin:
-    image: ghcr.io/${DOCKERHUB_USER:-jefryarianto}/ths-thm-web-admin:latest
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=staging
       - NEXT_PUBLIC_APP_NAME=THS-THM Admin (Staging)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-staging.rule=Host(`admin-staging.ths-thm.cloud`)"
+      - "traefik.http.routers.admin-staging.entrypoints=websecure"
+      - "traefik.http.routers.admin-staging.tls=true"
+      - "traefik.http.routers.admin-staging.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-staging.loadbalancer.server.port=3000"
+    networks:
+      - ths-thm-network
+      - traefik-network
 
-  nginx:
-    ports:
-      - "80:80"
+networks:
+  ths-thm-network:
+    external: true
+  traefik-network:
+    external: true
