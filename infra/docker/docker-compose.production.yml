@@ -67,7 +67,9 @@ services:
       - ths-thm-network
 
   api:
-    image: ghcr.io/${DOCKERHUB_USER:-jefryarianto}/ths-thm-api:latest
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
     container_name: ths-thm-api
     restart: unless-stopped
     ports:
@@ -114,7 +116,9 @@ services:
       - traefik-network
 
   web-admin:
-    image: ghcr.io/${DOCKERHUB_USER:-jefryarianto}/ths-thm-web-admin:latest
+    build:
+      context: ../..
+      dockerfile: apps/web-admin/Dockerfile
     container_name: ths-thm-web-admin
     restart: unless-stopped
     ports:
