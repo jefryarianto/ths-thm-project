@@ -67,9 +67,7 @@ services:
       - ths-thm-network
 
   api:
-    build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/${DOCKERHUB_USER:-jefryarianto}/ths-thm-api:latest
     container_name: ths-thm-api
     restart: unless-stopped
     ports:
@@ -116,11 +114,7 @@ services:
       - traefik-network
 
   web-admin:
-    build:
-      context: ../..
-      dockerfile: apps/web-admin/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: "https://api.ths-thm.cloud/api/v1"
+    image: ghcr.io/${DOCKERHUB_USER:-jefryarianto}/ths-thm-web-admin:latest
     container_name: ths-thm-web-admin
     restart: unless-stopped
     ports:
@@ -129,6 +123,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: "https://api.ths-thm.cloud/api/v1"
       NEXT_PUBLIC_APP_NAME: "THS-THM Admin"
+      RESTART_JOBS: "true"
     depends_on:
       - api
     labels:

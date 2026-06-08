@@ -318,8 +318,12 @@ jobs:
               COMPOSE_FILES="$COMPOSE_FILES -f infra/docker/docker-compose.ssl.yml"
             fi
 
-            docker compose $COMPOSE_FILES build --pull
-            docker compose $COMPOSE_FILES up -d --remove-orphans
+             # Login to GHCR once on runner (VPS pulls via network)
+             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+             # Pull latest images and restart — no local build
+             docker compose $COMPOSE_FILES pull
+             docker compose $COMPOSE_FILES up -d --remove-orphans
             docker system prune -f
 
       - name: Health Check
@@ -359,7 +363,7 @@ jobs:
           context: .
           file: apps/web-admin/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:latest
+          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:${{ github.sha }},ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.ths-thm.cloud/api/v1
           cache-from: type=gha
@@ -371,7 +375,7 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-api:latest
+          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-api:${{ github.sha }},ghcr.io/${{ github.repository_owner }}/ths-thm-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
