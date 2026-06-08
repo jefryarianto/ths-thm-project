@@ -173,7 +173,7 @@ jobs:
         run: |
           set -e
           mkdir -p ~/.ssh
-          printf "%s" "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf "%s" "${{ secrets.STAGING_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           echo "Wrote SSH key to ~/.ssh/id_ed25519"
           ls -l ~/.ssh/id_ed25519 || true
