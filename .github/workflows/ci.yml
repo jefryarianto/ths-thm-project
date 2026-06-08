@@ -171,11 +171,16 @@ jobs:
 
       - name: Setup SSH Agent
         run: |
+          set -e
           mkdir -p ~/.ssh
           printf "%s" "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          echo "Wrote SSH key to ~/.ssh/id_ed25519"
+          ls -l ~/.ssh/id_ed25519 || true
+          file ~/.ssh/id_ed25519 || true
+          head -n 3 ~/.ssh/id_ed25519 || true
           eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
+          ssh-add ~/.ssh/id_ed25519 || true
 
       - name: Diagnose SSH config (sanitized)
         run: |
