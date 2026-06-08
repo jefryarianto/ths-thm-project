@@ -19,8 +19,8 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-# Build - Next.js standalone output bundles everything needed
-RUN cd apps/web-admin && node ../../node_modules/next/dist/bin/next build
+    # Build - Next.js standalone output bundles everything needed
+    RUN cd apps/web-admin && pnpm build
 
 FROM node:22-bookworm-slim AS runner
 
