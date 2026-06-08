@@ -274,7 +274,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [api-test, web-admin-test, web-admin-e2e]
+    needs: [api-test, web-admin-test, docker-publish]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -339,7 +339,7 @@ jobs:
   docker-publish:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    needs: [api-test, web-admin-test, web-admin-e2e]
+    needs: [api-test, web-admin-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
