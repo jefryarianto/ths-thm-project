@@ -212,3 +212,5 @@ jobs:
           curl -sSf -o /dev/null -w "Health: %{http_code}\n" \
             "https://${{ secrets.STAGING_DOMAIN }}/api/v1/health"
           echo "Deployment verified successfully!"
+
+# no-op: trigger CI after SSH key fix
