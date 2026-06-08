@@ -175,7 +175,7 @@ jobs:
 
       - name: Deploy via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} -p ${{ secrets.STAGING_PORT || 22 }} << 'EOF'
+          ssh -v -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} -p ${{ secrets.STAGING_PORT || 22 }} << 'EOF'
             set -e
 
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
