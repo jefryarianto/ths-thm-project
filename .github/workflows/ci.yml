@@ -295,12 +295,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build API
-        run: pnpm --filter @ths-thm/shared build && pnpm --filter @ths-thm/templates build && pnpm --filter @ths-thm/api build
-
-      - name: Build Web-Admin
-        run: pnpm --filter @ths-thm/web-admin build
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
