@@ -165,14 +165,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup SSH Agent with passphrase
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519 <<< "${{ secrets.STAGING_SSH_PASSPHRASE }}"
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_PORT || 22 }}
-          script: |
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} -p ${{ secrets.STAGING_PORT || 22 }} << 'EOF'
             set -e
 
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
@@ -188,6 +191,10 @@ jobs:
             docker compose $COMPOSE_FILES build --pull
             docker compose $COMPOSE_FILES up -d --remove-orphans
             docker system prune -f
+
+            echo ">>> Checking running containers..."
+            docker compose $COMPOSE_FILES ps
+          EOF
 
       - name: Health Check
         run: |
