@@ -22,7 +22,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Build - Next.js standalone output bundles everything needed
 RUN cd apps/web-admin && node ../../node_modules/next/dist/bin/next build
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
