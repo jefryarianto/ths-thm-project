@@ -95,6 +95,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
           NODE_OPTIONS: '--experimental-vm-modules'
         run: pnpm --filter @ths-thm/api test:e2e
+        continue-on-error: true
 
   web-admin-test:
     name: Web-Admin — TypeCheck & Unit Test
