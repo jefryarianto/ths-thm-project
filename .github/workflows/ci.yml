@@ -169,28 +169,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Setup SSH Agent with passphrase
+      - name: Setup SSH Agent
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519 <<< "${{ secrets.STAGING_SSH_PASSPHRASE }}"
+          ssh-add ~/.ssh/id_ed25519
+        env:
+          STAGING_SSH_PASSPHRASE: ${{ secrets.STAGING_SSH_PASSPHRASE }}
+
+      - name: Prepare SSH config
+        run: |
+          cat > ~/.ssh/config <<'SSHEOF'
+          Host staging
+            HostName ${{ secrets.STAGING_HOST }}
+            User ${{ secrets.STAGING_USER }}
+            Port ${{ secrets.STAGING_PORT || 22 }}
+            StrictHostKeyChecking=no
+            LogLevel ERROR
+          SSHEOF
+          chmod 600 ~/.ssh/config
+
+      - name: Test SSH port reachability
+        run: |
+          echo "Testing connectivity to ${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_PORT || 22 }}..."
+          nc -z -w 10 ${{ secrets.STAGING_HOST }} ${{ secrets.STAGING_PORT || 22 }} || (echo "Port unreachable" && exit 1)
+
+      - name: Test SSH authentication
+        run: ssh -o BatchMode=yes -o ConnectTimeout=15 staging "echo 'SSH OK'"
 
       - name: Deploy via SSH
         run: |
-          ssh -v -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} -p ${{ secrets.STAGING_PORT || 22 }} << 'EOF'
+          set -e
+          ssh staging <<'EOF'
             set -e
-
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
             git fetch origin main
             git reset --hard origin/main
 
             COMPOSE_FILES="-f infra/docker/docker-compose.yml -f infra/docker/docker-compose.staging.yml"
-
-            if [ "${{ secrets.STAGING_USE_SSL }}" = "true" ]; then
-              COMPOSE_FILES="$COMPOSE_FILES -f infra/docker/docker-compose.ssl.yml"
-            fi
 
             docker compose $COMPOSE_FILES build --pull
             docker compose $COMPOSE_FILES up -d --remove-orphans
