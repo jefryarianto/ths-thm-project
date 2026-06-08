@@ -17,5 +17,10 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // webServer disalbe sementara — next dev sudah running di port 3000 via background_process
+  webServer: {
+    command: "pnpm start",
+    url: "http://localhost:3000",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 });

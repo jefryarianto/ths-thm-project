@@ -157,6 +157,9 @@ jobs:
       - name: Build @ths-thm/shared
         run: pnpm --filter @ths-thm/shared build
 
+      - name: Build Web-Admin for E2E
+        run: pnpm --filter @ths-thm/web-admin build
+
       - name: Run Playwright E2E tests
         run: pnpm --filter @ths-thm/web-admin exec playwright test
         env:
