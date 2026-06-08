@@ -172,37 +172,35 @@ jobs:
       - name: Setup SSH Agent
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf "%s" "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_ed25519
-        env:
-          STAGING_SSH_PASSPHRASE: ${{ secrets.STAGING_SSH_PASSPHRASE }}
 
-      - name: Prepare SSH config
+      - name: Diagnose SSH config (sanitized)
         run: |
-          cat > ~/.ssh/config <<'SSHEOF'
-          Host staging
-            HostName ${{ secrets.STAGING_HOST }}
-            User ${{ secrets.STAGING_USER }}
-            Port ${{ secrets.STAGING_PORT || 22 }}
-            StrictHostKeyChecking=no
-            LogLevel ERROR
-          SSHEOF
-          chmod 600 ~/.ssh/config
+          echo "Host present: ${{ secrets.STAGING_HOST != '' }}"
+          echo "User present: ${{ secrets.STAGING_USER != '' }}"
+          echo "Port present: ${{ secrets.STAGING_PORT != '' }}"
+          echo "Key file:"
+          ls -l ~/.ssh/id_ed25519 || true
 
       - name: Test SSH port reachability
         run: |
-          echo "Testing connectivity to ${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_PORT || 22 }}..."
-          nc -z -w 10 ${{ secrets.STAGING_HOST }} ${{ secrets.STAGING_PORT || 22 }} || (echo "Port unreachable" && exit 1)
+          if [ -z "${{ secrets.STAGING_HOST }}" ] || [ -z "${{ secrets.STAGING_PORT }}" ]; then
+            echo "Missing STAGING_HOST or STAGING_PORT"
+            exit 1
+          fi
+          echo "Testing connectivity to ${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_PORT }}..."
+          nc -z -w 10 ${{ secrets.STAGING_HOST }} ${{ secrets.STAGING_PORT }} || (echo "Port unreachable" && exit 1)
 
       - name: Test SSH authentication
-        run: ssh -o BatchMode=yes -o ConnectTimeout=15 staging "echo 'SSH OK'"
+        run: ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=no -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} "echo 'SSH OK'"
 
       - name: Deploy via SSH
         run: |
           set -e
-          ssh staging <<'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} <<'EOF'
             set -e
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
             git fetch origin main
