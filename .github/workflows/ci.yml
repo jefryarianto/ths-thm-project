@@ -155,55 +155,10 @@ jobs:
       - name: Check formatting
         run: pnpm exec prettier --check "**/*.{ts,tsx,js,jsx,json,md}" || echo "Prettier not installed — skipping format check"
 
-  docker-publish:
-    name: Build & Push Docker Images
-    runs-on: ubuntu-latest
-    needs: [api-test, web-admin-test, lint]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build & Push web-admin
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web-admin/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:${{ github.sha }},ghcr.io/${{ github.repository_owner }}/ths-thm-web-admin:latest
-          build-args: |
-            NEXT_PUBLIC_API_URL=https://api.ths-thm.cloud/api/v1
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build & Push api
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ths-thm-api:${{ github.sha }},ghcr.io/${{ github.repository_owner }}/ths-thm-api:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [docker-publish]
+    needs: [api-test, web-admin-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -218,8 +173,11 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_PORT || 22 }}
           script: |
+            set -e
+
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             COMPOSE_FILES="-f infra/docker/docker-compose.yml -f infra/docker/docker-compose.staging.yml"
 
@@ -227,9 +185,7 @@ jobs:
               COMPOSE_FILES="$COMPOSE_FILES -f infra/docker/docker-compose.ssl.yml"
             fi
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            docker compose $COMPOSE_FILES pull
+            docker compose $COMPOSE_FILES build --pull
             docker compose $COMPOSE_FILES up -d --remove-orphans
             docker system prune -f
 
