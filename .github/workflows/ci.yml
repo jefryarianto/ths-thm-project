@@ -190,6 +190,13 @@ jobs:
 
             docker compose $COMPOSE_FILES build --pull
             docker compose $COMPOSE_FILES up -d --remove-orphans
+
+            echo ">>> Running database migrations..."
+            docker compose $COMPOSE_FILES exec -T api npx prisma migrate deploy
+
+            echo ">>> Seeding database..."
+            docker compose $COMPOSE_FILES exec -T api npx prisma db seed || true
+
             docker system prune -f
 
             echo ">>> Checking running containers..."

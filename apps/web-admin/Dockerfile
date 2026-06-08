@@ -10,8 +10,8 @@ COPY apps/web-admin/package.json apps/web-admin/
 COPY apps/api/package.json apps/api/
 COPY packages/ packages/
 
-# Install all workspace dependencies
-RUN pnpm install --frozen-lockfile --ignore-scripts
+    # Install all workspace dependencies
+    RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy full source
 COPY . .
@@ -35,10 +35,9 @@ ENV PORT=3000
 COPY --from=builder /app/apps/web-admin/.next/standalone ./
 
 # Static assets must be at the app's .next/static path (Next.js serves from here)
-COPY --from=builder /app/apps/web-admin/.next/static ./apps/web-admin/.next/static
+COPY --from=builder /app/apps/web-admin/.next/static ./.next/static
 
-# Public folder must be at the app's public path
-COPY --from=builder /app/apps/web-admin/public ./apps/web-admin/public
+COPY --from=builder /app/apps/web-admin/public ./public
 
 EXPOSE 3000
 
