@@ -42,4 +42,5 @@ COPY --from=builder /app/apps/web-admin/public ./public
 EXPOSE 3000
 
 # In a monorepo, Next.js standalone places server.js at the workspace path
-CMD ["node", "server.js"]
+# In a monorepo, Next.js standalone places server.js at the workspace path
+CMD ["sh", "-c", "if [ -f server.js ]; then node server.js; elif [ -f apps/web-admin/server.js ]; then node apps/web-admin/server.js; else echo 'server.js not found' && ls -la && exit 1; fi"]
