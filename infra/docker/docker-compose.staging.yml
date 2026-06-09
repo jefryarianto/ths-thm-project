@@ -30,6 +30,9 @@ services:
       - traefik-network
 
   web-admin:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: "https://api.ths-thm.cloud/api/v1"
     ports:
       - "3000"
     environment:

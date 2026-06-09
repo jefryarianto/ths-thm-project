@@ -30,17 +30,10 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# Standalone server: Next.js puts server.js at the root of .next/standalone/
-# So after COPY, /app/server.js is the entry point
 COPY --from=builder /app/apps/web-admin/.next/standalone ./
-
-# Static assets must be at the app's .next/static path (Next.js serves from here)
-COPY --from=builder /app/apps/web-admin/.next/static ./.next/static
-
-COPY --from=builder /app/apps/web-admin/public ./public
+COPY --from=builder /app/apps/web-admin/public ./apps/web-admin/public
+COPY --from=builder /app/apps/web-admin/.next/static ./apps/web-admin/.next/static
 
 EXPOSE 3000
 
-# In a monorepo, Next.js standalone places server.js at the workspace path
-# In a monorepo, Next.js standalone places server.js at the workspace path
-CMD ["sh", "-c", "if [ -f server.js ]; then node server.js; elif [ -f apps/web-admin/server.js ]; then node apps/web-admin/server.js; else echo 'server.js not found' && ls -la && exit 1; fi"]
+CMD ["node", "server.js"]
