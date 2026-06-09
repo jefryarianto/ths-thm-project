@@ -80,13 +80,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api-staging.rule=Host(`api-staging.ths-thm.cloud`)"
-      - "traefik.http.routers.api-staging.entrypoints=websecure"
-      - "traefik.http.routers.api-staging.tls=true"
-      - "traefik.http.routers.api-staging.tls.certresolver=letsencrypt"
-      - "traefik.http.services.api-staging.loadbalancer.server.port=4000"
+    ports:
+      - "4000"
     networks:
       - ths-thm-network
       - traefik-network
@@ -98,16 +93,11 @@ services:
     container_name: ths-thm-web-admin
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:80/api"
+      NEXT_PUBLIC_API_URL: "https://api.ths-thm.cloud/api/v1"
     depends_on:
       - api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.admin-staging.rule=Host(`admin-staging.ths-thm.cloud`)"
-      - "traefik.http.routers.admin-staging.entrypoints=websecure"
-      - "traefik.http.routers.admin-staging.tls=true"
-      - "traefik.http.routers.admin-staging.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-staging.loadbalancer.server.port=3000"
+    ports:
+      - "3000"
     networks:
       - ths-thm-network
       - traefik-network
