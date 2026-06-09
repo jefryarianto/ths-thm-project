@@ -29,10 +29,10 @@ services:
       - ths-thm-network
       - traefik-network
 
-   web-admin:
-     ports:
-       - "3000"
-     environment:
+  web-admin:
+    ports:
+      - "3000"
+    environment:
       - NODE_ENV=staging
       - NEXT_PUBLIC_APP_NAME=THS-THM Admin (Staging)
     labels:
