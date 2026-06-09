@@ -42,4 +42,4 @@ COPY --from=builder /app/apps/web-admin/public ./public
 EXPOSE 3000
 
 # In a monorepo, Next.js standalone places server.js at the workspace path
-CMD ["node", "apps/web-admin/server.js"]
+CMD ["node", "server.js"]
