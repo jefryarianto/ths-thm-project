@@ -22,3 +22,6 @@ playwright-report/
 **/*firebase-adminsdk*.json
 **/*.key.json
 **/service-account*.json
+
+.kilo/
+
