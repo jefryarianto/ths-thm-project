@@ -169,26 +169,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Setup SSH Agent
+- name: Setup SSH Agent
         run: |
           set -e
           mkdir -p ~/.ssh
           printf "%s\n" "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "Wrote SSH key to ~/.ssh/id_ed25519"
-          ls -l ~/.ssh/id_ed25519 || true
-          file ~/.ssh/id_ed25519 || true
-          head -n 3 ~/.ssh/id_ed25519 || true
           eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519 || true
-
-      - name: Diagnose SSH config (sanitized)
-        run: |
-          echo "Host present: ${{ secrets.STAGING_HOST != '' }}"
-          echo "User present: ${{ secrets.STAGING_USER != '' }}"
-          echo "Port present: ${{ secrets.STAGING_PORT != '' }}"
-          echo "Key file:"
-          ls -l ~/.ssh/id_ed25519 || true
+          ssh-add ~/.ssh/id_ed25519
 
       - name: Test SSH port reachability
         run: |
@@ -200,12 +188,12 @@ jobs:
           nc -z -w 10 ${{ secrets.STAGING_HOST }} ${{ secrets.STAGING_PORT }} || (echo "Port unreachable" && exit 1)
 
       - name: Test SSH authentication
-        run: ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=no -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} "echo 'SSH OK'"
+        run: ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} "echo 'SSH OK'"
 
       - name: Deploy via SSH
         run: |
           set -e
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} <<'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 -p ${{ secrets.STAGING_PORT }} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} <<'EOF'
             set -e
             cd ${{ secrets.STAGING_PATH || '/opt/ths-thm' }}
             git fetch origin main
