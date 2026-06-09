@@ -25,3 +25,7 @@ playwright-report/
 
 .kilo/
 
+
+.kilo/*
+NUL
+

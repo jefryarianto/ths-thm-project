@@ -20,26 +20,28 @@ services:
       - MINIO_USE_SSL=false
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api-staging.rule=Host(`api-staging.ths-thm.cloud`)"
-      - "traefik.http.routers.api-staging.entrypoints=websecure"
-      - "traefik.http.routers.api-staging.tls=true"
-      - "traefik.http.routers.api-staging.tls.certresolver=letsencrypt"
-      - "traefik.http.services.api-staging.loadbalancer.server.port=4000"
+      - "traefik.http.routers.api.rule=Host(`api.ths-thm.cloud`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls=true"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=4000"
     networks:
       - ths-thm-network
       - traefik-network
 
-  web-admin:
-    environment:
+   web-admin:
+     ports:
+       - "3000"
+     environment:
       - NODE_ENV=staging
       - NEXT_PUBLIC_APP_NAME=THS-THM Admin (Staging)
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.admin-staging.rule=Host(`admin-staging.ths-thm.cloud`)"
-      - "traefik.http.routers.admin-staging.entrypoints=websecure"
-      - "traefik.http.routers.admin-staging.tls=true"
-      - "traefik.http.routers.admin-staging.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-staging.loadbalancer.server.port=3000"
+      - "traefik.http.routers.admin.rule=Host(`admin.ths-thm.cloud`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.tls=true"
+      - "traefik.http.routers.admin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin.loadbalancer.server.port=3000"
     networks:
       - ths-thm-network
       - traefik-network
