@@ -1,25 +1,11 @@
-# THS-THM Deployment via Pre-built Images (ghcr.io)
-# ==================================================
-# Usage (VPS):
-#   docker compose -f infra/docker/docker-compose.registry.yml pull
-#   docker compose -f infra/docker/docker-compose.registry.yml up -d
-#
-# Build & push from local machine first:
-#   .\scripts\deploy.ps1
-#
-# Prerequisites:
-#   - docker login ghcr.io -u jefryarianto --password-stdin
-#   - Domain: api.ths-thm.cloud dan admin.ths-thm.cloud pointing ke VPS
-
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: ths-thm-postgres
     restart: unless-stopped
-    ports:
-      - "5432"
     environment:
       POSTGRES_USER: ths_thm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ths_thm_secret}
+      POSTGRES_PASSWORD: ths_thm_secret
       POSTGRES_DB: ths_thm_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -34,9 +20,8 @@ services:
 
   valkey:
     image: valkey/valkey:8-alpine
+    container_name: ths-thm-valkey
     restart: unless-stopped
-    ports:
-      - "6379"
     volumes:
       - valkey_data:/data
     healthcheck:
@@ -49,13 +34,11 @@ services:
 
   minio:
     image: minio/minio:latest
+    container_name: ths-thm-minio
     restart: unless-stopped
-    ports:
-      - "9000"
-      - "9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -68,30 +51,21 @@ services:
       - ths-thm-network
 
   api:
-    image: ghcr.io/jefryarianto/ths-thm-api:latest
+    image: ${DOCKERHUB_USER:-jefryarianto}/ths-thm-api:latest
+    container_name: ths-thm-api
     restart: unless-stopped
-    ports:
-      - "4000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: staging
       API_PORT: 4000
-      DATABASE_URL: "postgresql://ths_thm:${POSTGRES_PASSWORD:-ths_thm_secret}@postgres:5432/ths_thm_db?schema=public"
+      DATABASE_URL: "postgresql://ths_thm:ths_thm_secret@postgres:5432/ths_thm_db?schema=public"
       REDIS_URL: "redis://valkey:6379"
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ACCESS_EXPIRY: "15m"
-      JWT_REFRESH_EXPIRY: "7d"
+      JWT_SECRET: ${JWT_SECRET:-staging-jwt-secret-change-me}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: ths-thm-docs
       MINIO_USE_SSL: "false"
-      S3_REGION: auto
-      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON}
-      CORS_ORIGIN: "https://admin.ths-thm.cloud"
-      TRUST_PROXY: "1"
-      DOCUMENTS_STORAGE: minio
-      UPLOAD_DIR: ./uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,21 +75,34 @@ services:
         condition: service_healthy
     networks:
       - ths-thm-network
-      - dokploy-network
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.ths-thm.cloud`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls=true"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=4000"
 
   web-admin:
-    image: ghcr.io/jefryarianto/ths-thm-web-admin:latest
+    image: ${DOCKERHUB_USER:-jefryarianto}/ths-thm-web-admin:latest
+    container_name: ths-thm-web-admin
     restart: unless-stopped
-    ports:
-      - "3000"
     environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_APP_NAME: "THS-THM Admin"
+      NODE_ENV: staging
+      NEXT_PUBLIC_APP_NAME: "THS-THM Admin (Staging)"
     depends_on:
       - api
     networks:
       - ths-thm-network
-      - dokploy-network
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`admin.ths-thm.cloud`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.tls=true"
+      - "traefik.http.routers.admin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin.loadbalancer.server.port=3000"
 
 volumes:
   postgres_data:
@@ -124,5 +111,5 @@ volumes:
 
 networks:
   ths-thm-network:
-  dokploy-network:
+  traefik-network:
     external: true
