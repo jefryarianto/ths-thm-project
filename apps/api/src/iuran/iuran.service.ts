@@ -178,13 +178,13 @@ export class IuranService {
     const rows: Array<{ bulan: number; tahun: number; jumlah: string; count: bigint }> =
       await this.prisma.$queryRaw`
         SELECT
-          EXTRACT(MONTH FROM "tanggal_bayar") as "bulan",
-          EXTRACT(YEAR FROM "tanggal_bayar") as "tahun",
-          CAST(COALESCE(SUM("jumlah_bayar"), 0) AS TEXT) as "jumlah",
+          EXTRACT(MONTH FROM "tanggalBayar") as "bulan",
+          EXTRACT(YEAR FROM "tanggalBayar") as "tahun",
+          CAST(COALESCE(SUM("jumlahBayar"), 0) AS TEXT) as "jumlah",
           CAST(COUNT(*) AS BIGINT) as "count"
         FROM "pembayaran_iuran"
         WHERE "status" = 'lunas'
-          AND "tanggal_bayar" >= ${sixMonthsAgo}
+          AND "tanggalBayar" >= ${sixMonthsAgo}
         GROUP BY "tahun", "bulan"
         ORDER BY "tahun" ASC, "bulan" ASC
       `;
