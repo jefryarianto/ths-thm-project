@@ -11,7 +11,7 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/ui/package.json packages/ui/
 
     # Install only web-admin + its workspace deps (linux-x64 platform only)
-    RUN printf 'supportedArchitectures[os]=linux\nsupportedArchitectures[cpu]=x64\n' >> .npmrc && \
+    RUN printf 'supportedArchitectures[os]=linux\nsupportedArchitectures[cpu]=x64\nregistry=https://registry.npmmirror.com\n' >> .npmrc && \
         pnpm install --frozen-lockfile --ignore-scripts --filter @ths-thm/web-admin --filter @ths-thm/shared --filter @ths-thm/ui
 
 # Copy full source
