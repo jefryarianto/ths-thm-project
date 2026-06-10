@@ -18,6 +18,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=ths-thm-docs
       - MINIO_USE_SSL=false
+      - CORS_ORIGIN=https://admin.ths-thm.cloud,https://api.ths-thm.cloud
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.ths-thm.cloud`)"
