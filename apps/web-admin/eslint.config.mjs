@@ -5,10 +5,8 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-import { defineConfig, globalIgnores, config } from "eslint/config";
-
 const eslintConfig = defineConfig([
-  config({ rules: {
+  { rules: {
       "react-hooks/disable-compiler": "off",
       "react-hooks/incompatible-library": "off",
       "react-hooks/set-state-in-effect": "off",
@@ -19,13 +17,14 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
       "@next/next/no-img-element": "off",
       "storybook/no-renderer-packages": "off",
-    }}),
+    }},
   ...nextVitals,
   ...nextTs,
   globalIgnores([
     ".next/**",
     "out/**",
     "build/**",
+    "storybook-static/**",
     "next-env.d.ts",
   ]),
   ...storybook.configs["flat/recommended"]

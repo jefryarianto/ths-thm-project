@@ -27,5 +27,6 @@ playwright-report/
 
 
 .kilo/*
-NUL
+# SSH config
+.env.ssh
 
