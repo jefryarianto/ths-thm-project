@@ -1,13 +1,3 @@
-﻿node.exe : warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please 
-migrate to a Prisma config file (e.g., `prisma.config.ts`).
-At C:\Users\jefryarianto\AppData\Roaming\npm\pnpm.ps1:24 char:5
-+     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.mjs" $args
-+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (warn The config...ma.config.ts`).:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 
-For more information, see: https://pris.ly/prisma-config
-
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
