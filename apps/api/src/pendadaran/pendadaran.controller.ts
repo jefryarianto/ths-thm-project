@@ -133,6 +133,57 @@ export class PendadaranController {
   }
 
   // ─── Hasil ───
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan', 'penguji')
+  @Get('hasil')
+  @ApiOperation({ summary: 'Get all pendadaran results with filters' })
+  findAllHasil(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: number,
+    @Query('page') page?: number,
+  ) {
+    return this.pendadaranService.findAll(undefined, status, page || 1, limit || 10, search || undefined);
+  }
+
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
+  @Post('hasil')
+  @ApiOperation({ summary: 'Create pendadaran result' })
+  createHasil(@Body() data: {
+    kegiatanId: number;
+    calonAnggotaId: number;
+    statusKelulusan?: string;
+    totalSkor?: number;
+    ranking?: number;
+  }) {
+    return this.pendadaranService.createHasil(data);
+  }
+
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan', 'penguji')
+  @Get('hasil/:id')
+  @ApiOperation({ summary: 'Get single pendadaran result by ID' })
+  findHasilById(@Param('id') id: string) {
+    return this.pendadaranService.findById(+id);
+  }
+
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
+  @Put('hasil/:id')
+  @ApiOperation({ summary: 'Update pendadaran result' })
+  updateHasil(
+    @Param('id') id: string,
+    @Body() data: {
+      statusKelulusan?: string; totalSkor?: number; ranking?: number;
+    },
+  ) {
+    return this.pendadaranService.updateHasil(+id, data);
+  }
+
+  @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
+  @Delete('hasil/:id')
+  @ApiOperation({ summary: 'Delete pendadaran result' })
+  deleteHasil(@Param('id') id: string) {
+    return this.pendadaranService.deleteHasil(+id);
+  }
+
   @Post('hitung')
   @Roles('superadmin', 'admin_distrik', 'admin_kegiatan')
   @ApiOperation({ summary: 'Calculate final score and ranking for a calon' })
@@ -179,5 +230,11 @@ export class PendadaranController {
     @Param('calonAnggotaId') calonAnggotaId: string,
   ) {
     return this.pendadaranService.getNilaiDetail(+kegiatanId, +calonAnggotaId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete pendadaran result by ID (alias)' })
+  deleteHasilAlias(@Param('id') id: string) {
+    return this.pendadaranService.deleteHasil(+id);
   }
 }

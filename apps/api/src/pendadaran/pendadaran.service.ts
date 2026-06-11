@@ -249,10 +249,17 @@ export class PendadaranService {
   }
 
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Query Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  async findAll(kegiatanId?: number, status?: string, page = 1, limit = 10) {
+  async findAll(kegiatanId?: number, status?: string, page = 1, limit = 10, search?: string) {
     const where: any = {};
     if (kegiatanId) where.kegiatanId = kegiatanId;
     if (status) where.statusValidasi = status;
+
+    if (search) {
+      where.OR = [
+        { calonAnggota: { namaLengkap: { contains: search, mode: 'insensitive' } } },
+        { kegiatan: { nama: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.hasilPendadaran.findMany({
@@ -291,5 +298,53 @@ export class PendadaranService {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  async findById(id: number) {
+    const hasil = await this.prisma.hasilPendadaran.findUnique({
+      where: { id },
+      include: {
+        calonAnggota: { select: { id: true, namaLengkap: true } },
+        kegiatan: { select: { id: true, nama: true } },
+        validator: { select: { id: true, name: true } },
+      },
+    });
+    if (!hasil) throw new NotFoundException('Hasil pendadaran not found');
+    return hasil;
+  }
+
+  async createHasil(data: {
+    kegiatanId: number;
+    calonAnggotaId: number;
+    statusKelulusan?: string;
+    totalSkor?: number;
+    ranking?: number;
+  }) {
+    return this.prisma.hasilPendadaran.create({
+      data: {
+        kegiatanId: data.kegiatanId,
+        calonAnggotaId: data.calonAnggotaId,
+        statusKelulusan: data.statusKelulusan || 'pending',
+        totalSkor: data.totalSkor || 0,
+        ranking: data.ranking || 0,
+      },
+    });
+  }
+
+  async updateHasil(id: number, data: {
+    statusKelulusan?: string;
+    totalSkor?: number;
+    ranking?: number;
+  }) {
+    const hasil = await this.prisma.hasilPendadaran.findUnique({ where: { id } });
+    if (!hasil) throw new NotFoundException('Hasil pendadaran not found');
+    return this.prisma.hasilPendadaran.update({ where: { id }, data });
+  }
+
+  async deleteHasil(id: number) {
+    const hasil = await this.prisma.hasilPendadaran.findUnique({ where: { id } });
+    if (!hasil) throw new NotFoundException('Hasil pendadaran not found');
+    await this.prisma.hasilPendadaran.delete({ where: { id } });
+    return { message: 'Hasil pendadaran berhasil dihapus' };
   }
 }
