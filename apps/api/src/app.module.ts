@@ -14,6 +14,8 @@ import { LatihanModule } from './latihan/latihan.module.js';
 import { AbsensiModule } from './absensi/absensi.module.js';
 import { IuranModule } from './iuran/iuran.module.js';
 import { PendadaranModule } from './pendadaran/pendadaran.module.js';
+import { ProfileModule } from './profile/profile.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { DokumenModule } from './dokumen/dokumen.module.js';
 import { KontenModule } from './konten/konten.module.js';
 import { PustakaModule } from './pustaka/pustaka.module.js';
@@ -44,6 +46,8 @@ import { FirebaseModule } from './firebase/firebase.module.js';
     AbsensiModule,
     IuranModule,
     PendadaranModule,
+    ProfileModule,
+    SettingsModule,
     DokumenModule,
     KontenModule,
     PustakaModule,
